@@ -2,6 +2,8 @@
 
 Status: active first provider.
 
+Known credit: about 5,300,000 KRW. Expiration date is not recorded yet.
+
 ## Credentials
 
 Put actual values in `.env.local`.
@@ -33,7 +35,7 @@ NCP_CLOVASTUDIO_API_GATEWAY_KEY=
 
 ## Experiment candidates
 
-- Object Storage bucket for generated files.
-- OCR/document extraction on sample PDFs.
-- CLOVA Studio summarization/extraction test.
+- Object Storage bucket for generated research/TIPS files.
+- OCR/document extraction on sample PDFs from `C:\Users\hjyeo\Desktop\웰박\10 TIPS`.
+- CLOVA Studio summarization/extraction test for R&D/reporting material.
 - CDN/static delivery for generated assets.

@@ -4,7 +4,7 @@
     "displayName": "Naver Cloud Platform",
     "status": "active",
     "credit": {
-      "amount": null,
+      "amount": 5300000,
       "currency": "KRW",
       "expiresOn": null
     },
@@ -19,7 +19,8 @@
       "CLOVA Studio",
       "OCR / document AI",
       "CDN",
-      "Cloud Functions or batch compute"
+      "Cloud Functions or batch compute",
+      "Research document automation for TIPS/R&D work"
     ]
   },
   {

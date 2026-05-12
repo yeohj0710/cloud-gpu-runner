@@ -4,7 +4,7 @@ Use this as the human-readable source of truth for credits.
 
 | Provider | Credit amount | Currency | Expiration | Account/project | Notes |
 | --- | ---: | --- | --- | --- | --- |
-| Naver Cloud Platform | TBD | KRW | TBD | TBD | First provider to configure |
+| Naver Cloud Platform | 5,300,000 | KRW | TBD | TBD | Approximate user-reported credit; first provider to configure |
 | Kakao Cloud | TBD | KRW | TBD | TBD | Placeholder |
 
 ## Update rules

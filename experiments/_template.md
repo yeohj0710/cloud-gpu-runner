@@ -7,6 +7,7 @@
 - Status: planned
 - Date:
 - Cost cap:
+- Related project/path:
 
 ## Goal
 
