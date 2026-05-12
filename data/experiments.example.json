@@ -1,0 +1,13 @@
+[
+  {
+    "id": "exp-001",
+    "title": "Verify NCP credentials",
+    "providerId": "naver-cloud-platform",
+    "service": "NCP API",
+    "status": "planned",
+    "costCap": "minimal",
+    "startedOn": null,
+    "finishedOn": null,
+    "result": null
+  }
+]

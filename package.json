@@ -1,0 +1,12 @@
+{
+  "name": "cloud-credit-lab",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "check:env": "node scripts/check-env.mjs",
+    "check:env:naver": "node scripts/check-env.mjs naver",
+    "check:env:kakao": "node scripts/check-env.mjs kakao"
+  },
+  "devDependencies": {}
+}

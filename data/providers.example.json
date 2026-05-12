@@ -1,0 +1,41 @@
+[
+  {
+    "id": "naver-cloud-platform",
+    "displayName": "Naver Cloud Platform",
+    "status": "active",
+    "credit": {
+      "amount": null,
+      "currency": "KRW",
+      "expiresOn": null
+    },
+    "envVars": [
+      "NCP_ACCESS_KEY_ID",
+      "NCP_SECRET_KEY",
+      "NCP_REGION",
+      "NCP_API_ENDPOINT"
+    ],
+    "serviceCandidates": [
+      "Object Storage",
+      "CLOVA Studio",
+      "OCR / document AI",
+      "CDN",
+      "Cloud Functions or batch compute"
+    ]
+  },
+  {
+    "id": "kakao-cloud",
+    "displayName": "Kakao Cloud",
+    "status": "planned",
+    "credit": {
+      "amount": null,
+      "currency": "KRW",
+      "expiresOn": null
+    },
+    "envVars": [
+      "KAKAO_CLOUD_ACCESS_KEY_ID",
+      "KAKAO_CLOUD_SECRET_ACCESS_KEY",
+      "KAKAO_CLOUD_REGION"
+    ],
+    "serviceCandidates": []
+  }
+]

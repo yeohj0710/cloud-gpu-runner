@@ -1,0 +1,56 @@
+# Cloud Credit Lab
+
+네이버클라우드플랫폼, 카카오클라우드 등에서 받은 크레딧을 실제로 써보면서
+서비스 후보, API 키, 비용, 실험 결과를 정리하는 개인 R&D repo입니다.
+
+## 현재 설계 판단
+
+지금은 Next.js/Vercel 앱을 바로 만들지 않습니다.
+
+이유:
+- 아직 시각화할 데이터 모델과 실험 지표가 확정되지 않았습니다.
+- 먼저 크레딧 만료일, 서비스 후보, API 키, 실험 기록이 안정적으로 쌓여야 합니다.
+- Next.js를 먼저 만들면 대시보드 구조가 실험 방향을 불필요하게 고정할 수 있습니다.
+
+대신 `apps/` 폴더를 비워두었습니다. 나중에 실제로 보여줄 데이터가 생기면
+`apps/dashboard`에 Next.js 앱을 추가하고 Vercel 배포를 붙이면 됩니다.
+
+## 빠른 시작
+
+```powershell
+cd C:\dev\cloud-credit-lab
+Copy-Item .env.example .env.local
+notepad .env.local
+npm run check:env:naver
+```
+
+`.env.local`은 git에 올라가지 않게 막아두었습니다. 실제 API 키는 그 파일에만 넣으세요.
+
+## 폴더 구조
+
+```text
+apps/                  나중에 Next.js 대시보드가 들어갈 자리
+data/                  provider/experiment 예시 데이터
+docs/                  설계 문서와 provider별 메모
+experiments/           실험 기록 템플릿과 실제 실험 노트
+scripts/               로컬 점검 스크립트
+.env.example           필요한 환경변수 이름만 정리한 예시
+```
+
+## 운영 원칙
+
+- 실제 키, 토큰, secret은 `.env.local` 또는 로컬 secret store에만 둡니다.
+- 크레딧을 쓰는 실험은 먼저 무료/최소 호출로 API 연결을 확인합니다.
+- 실험마다 목적, 사용 서비스, 예상 비용, 결과, 다음 액션을 `experiments/`에 남깁니다.
+- 서비스 비교는 "멋있어 보이는 기능"보다 실제로 재사용 가능한 워크플로우 중심으로 봅니다.
+
+## Next.js를 붙이는 기준
+
+다음 중 2개 이상이 생기면 `apps/dashboard`를 만드는 편이 좋습니다.
+
+- provider별 크레딧 잔액/만료일을 표로 보고 싶다.
+- 실험 결과를 날짜/서비스/비용 기준으로 필터링하고 싶다.
+- 외부 API 호출 결과를 시각화해야 한다.
+- Vercel에 배포해서 모바일에서도 빠르게 확인하고 싶다.
+
+그 전까지는 Markdown + JSON + 작은 스크립트가 더 빠릅니다.
