@@ -1,11 +1,9 @@
 # Apps
 
-Dashboard apps live here when needed.
+## `apps/dashboard`
 
-Recommended future path:
+Next.js App Router dashboard for safe cloud-credit experiments.
 
-```text
-apps/dashboard
-```
-
-Add a Next.js app only after credit/provider/experiment data is worth visualizing.
+- Browser UI sends actions to server API routes.
+- NCP/Kakao credentials stay in server-side environment variables.
+- Execute actions can be protected with `DASHBOARD_RUN_TOKEN`, especially on Vercel.

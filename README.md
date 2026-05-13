@@ -36,10 +36,21 @@ npm run check:env:naver
 
 `.env.local`은 git에 올라가지 않게 막아두었습니다. 실제 API 키는 그 파일에만 넣으세요.
 
+## 로컬 안전장치
+
+```powershell
+npm run check:secrets
+npm run check:safety
+git config core.hooksPath .githooks
+```
+
+`check:secrets`는 tracked/staged 파일에 실제 키처럼 보이는 값이 들어갔는지 확인합니다.
+로컬 `.env.local`은 배포/커밋 대상이 아니며, 배포 환경에는 필요한 변수 이름만 별도로 등록하세요.
+
 ## 폴더 구조
 
 ```text
-apps/                  나중에 Next.js 대시보드가 들어갈 자리
+apps/dashboard         Next.js 실험 콘솔
 data/                  provider/experiment 예시 데이터
 docs/                  설계 문서와 provider별 메모
 experiments/           실험 기록 템플릿과 실제 실험 노트
@@ -47,10 +58,22 @@ scripts/               로컬 점검 스크립트
 .env.example           필요한 환경변수 이름만 정리한 예시
 ```
 
+## Dashboard
+
+```powershell
+npm run dashboard:dev
+npm run dashboard:build
+```
+
+대시보드는 `apps/dashboard`에 있으며 Vercel 배포를 염두에 둔 Next.js App Router 앱입니다.
+NCP 호출은 브라우저가 아니라 서버 API route에서만 실행됩니다.
+Vercel에 배포할 때는 `DASHBOARD_RUN_TOKEN`을 환경변수로 설정하고, 실행 버튼을 누르는 사용자만 같은 토큰을 입력하세요.
+
 ## 운영 원칙
 
 - 실제 키, 토큰, secret은 `.env.local` 또는 로컬 secret store에만 둡니다.
 - 크레딧을 쓰는 실험은 먼저 무료/최소 호출로 API 연결을 확인합니다.
+- 비용 한도와 중단 조건은 [docs/cost-controls.md](docs/cost-controls.md)에 맞춰 정합니다.
 - 실험마다 목적, 사용 서비스, 예상 비용, 결과, 다음 액션을 `experiments/`에 남깁니다.
 - 서비스 비교는 "멋있어 보이는 기능"보다 실제로 재사용 가능한 워크플로우 중심으로 봅니다.
 - 현재 Naver Cloud Platform 크레딧은 약 5,300,000 KRW로 기록합니다.

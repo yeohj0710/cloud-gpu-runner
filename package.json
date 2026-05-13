@@ -6,7 +6,19 @@
   "scripts": {
     "check:env": "node scripts/check-env.mjs",
     "check:env:naver": "node scripts/check-env.mjs naver",
-    "check:env:kakao": "node scripts/check-env.mjs kakao"
+    "check:env:kakao": "node scripts/check-env.mjs kakao",
+    "check:secrets": "node scripts/check-secrets.mjs",
+    "check:safety": "npm run check:secrets && npm run check:env:naver",
+    "ncp:smoke": "node scripts/ncp-smoke-test.mjs",
+    "ncp:smoke:execute": "node scripts/ncp-smoke-test.mjs --execute",
+    "ncp:cost:snapshot": "node scripts/ncp-cost-snapshot.mjs",
+    "ncp:cost:snapshot:execute": "node scripts/ncp-cost-snapshot.mjs --execute",
+    "ncp:object-storage:smoke": "node scripts/ncp-object-storage-smoke-test.mjs",
+    "ncp:object-storage:smoke:execute": "node scripts/ncp-object-storage-smoke-test.mjs --execute",
+    "dashboard:dev": "npm --prefix apps/dashboard run dev",
+    "dashboard:build": "npm --prefix apps/dashboard run build",
+    "dashboard:lint": "npm --prefix apps/dashboard run lint",
+    "dashboard:verify": "npm --prefix apps/dashboard run verify"
   },
   "devDependencies": {}
 }

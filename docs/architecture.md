@@ -30,9 +30,11 @@ summarization or extraction.
    - Minimal verification method
    - Result and next action
 
-3. Optional dashboard
-   - Add later as `apps/dashboard`
-   - Next.js + Vercel is a good fit once there is data worth filtering or visualizing
+3. Dashboard
+   - `apps/dashboard`
+   - Next.js App Router with server-side API routes for provider calls
+   - Browser UI never receives provider secrets
+   - Execute actions can be protected with `DASHBOARD_RUN_TOKEN` on Vercel
 
 ## Suggested first experiments
 
@@ -47,3 +49,4 @@ summarization or extraction.
 
 - 2026-05-12: Started without Next.js. Dashboard is deferred until experiment data exists.
 - 2026-05-12: Marked research/TIPS work as the highest-probability use case and recorded NCP credit at about 5,300,000 KRW.
+- 2026-05-13: Added `apps/dashboard` as a safe experiment console after NCP auth and billing snapshot checks were working.
