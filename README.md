@@ -1,6 +1,8 @@
 # Work Memory
 
-Vercel preview: https://work-memory-34snni4i3-yeohj0710s-projects.vercel.app
+Protected Vercel preview: https://work-memory-em2bbu3wu-yeohj0710s-projects.vercel.app
+
+접속 비밀번호는 코드나 GitHub에 저장하지 않고 Vercel의 암호화된 `APP_PASSWORD` 환경변수로 관리합니다. 인증 성공 시 12시간 유효한 HttpOnly 세션 쿠키를 발급하며, 로그아웃하면 즉시 폐기합니다.
 
 > Vercel 배포판은 민감정보가 없는 브라우저 크레딧 원장입니다. 실제 화면 기록, 클라우드 키, 공급자 API 호출과 GPU 실행은 로컬 에이전트 `http://127.0.0.1:8765`에서만 처리합니다.
 
