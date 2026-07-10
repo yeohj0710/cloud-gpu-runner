@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "verify": "node scripts/verify-dashboard.mjs"
+    "test": "npm run lint && npm run build && npm run verify",
+    "verify": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-dashboard.ps1"
   },
   "dependencies": {
     "lucide-react": "^1.14.0",

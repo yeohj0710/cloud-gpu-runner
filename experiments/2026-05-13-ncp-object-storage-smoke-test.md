@@ -4,8 +4,8 @@
 
 - Provider: Naver Cloud Platform
 - Service: Object Storage
-- Status: blocked
-- Date: 2026-05-13
+- Status: completed
+- Date: 2026-05-13, retested 2026-07-10
 - Cost cap: Tier 1, <= 1,000 KRW
 - Related project/path: `C:\dev\cloud-credit-lab`
 
@@ -31,20 +31,19 @@ Verify that Object Storage can create a bucket, store a small generated artifact
 
 - What worked:
   - Dry-run completed and showed the planned temporary bucket/object workflow.
-  - The execute path attempted only the create-bucket step.
-  - No bucket or object was created.
+  - The 2026-07-10 retest created one bucket, uploaded and downloaded one tiny object, and deleted both resources.
+  - Create returned HTTP 200, object upload and read returned HTTP 200, object deletion returned HTTP 204, and bucket deletion returned HTTP 204.
 - What failed:
-  - Create bucket returned HTTP 403 with `InvalidAccessKeyId`.
-  - The generic NCP IAM key works for NCP API Gateway metadata calls, but was not accepted by Object Storage's S3-compatible API.
+  - The first 2026-05-13 run returned `InvalidAccessKeyId` before S3-compatible credentials were configured.
 - Actual cost/credit usage:
-  - 0 KRW expected. The request failed before creating storage resources.
+  - Near 0 KRW expected. The successful test retained no resources.
 
 ## Next action
 
 - Keep:
   - Immediate cleanup after small storage tests.
 - Change:
-  - Add Object Storage-specific credential env vars and retry after those values are available.
-  - Keep the execute path blocked until those S3-compatible credentials are set.
+  - Keep Object Storage-specific credentials separate from generic NCP API keys.
+  - Use content-addressed keys and private ACLs for persistent project artifacts.
 - Stop:
-  - Do not keep a bucket alive until there is a named artifact workflow and retention rule.
+  - Do not upload `.env`, OAuth credentials, private keys, n8n databases, or files outside `C:\dev`.

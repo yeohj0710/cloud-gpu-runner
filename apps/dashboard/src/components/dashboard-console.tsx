@@ -8,6 +8,7 @@ import {
   CreditCard,
   Database,
   Eye,
+  FileSearch,
   KeyRound,
   Play,
   RefreshCcw,
@@ -15,7 +16,7 @@ import {
   Sparkles,
   Terminal,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 type Step = {
   label: string;
@@ -42,11 +43,19 @@ type RunResult = {
   bucketName?: string;
   objectName?: string;
   request?: string;
+  model?: string;
+  output?: string;
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+  };
   steps?: Step[];
 };
 
 type ConfigStatus = {
   deployed: boolean;
+  environment: "vercel" | "production" | "local";
   runTokenConfigured: boolean;
   runTokenRequired: boolean;
   canExecuteWithoutToken: boolean;
@@ -54,43 +63,83 @@ type ConfigStatus = {
 };
 
 type Experiment = {
-  id: "region" | "cost" | "object-storage";
+  id: "region" | "cost" | "object-storage" | "clova-studio";
   title: string;
   service: string;
   cost: string;
   endpoint: string;
+  dryRunSummary: string;
+  executeSummary: string;
   icon: typeof Cloud;
   accent: "green" | "amber" | "blue";
-  disabled?: boolean;
 };
+
+const REQUEST_TIMEOUT_MS = 30_000;
+const RUN_TOKEN_STORAGE_KEY = "cloud-credit-run-token";
+const RUN_TOKEN_EVENT = "cloud-credit-run-token-change";
+
+function subscribeRunToken(callback: () => void) {
+  window.addEventListener("storage", callback);
+  window.addEventListener(RUN_TOKEN_EVENT, callback);
+
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener(RUN_TOKEN_EVENT, callback);
+  };
+}
+
+function readRunToken() {
+  return window.localStorage.getItem(RUN_TOKEN_STORAGE_KEY) ?? "";
+}
+
+function readServerRunToken() {
+  return "";
+}
 
 const experiments: Experiment[] = [
   {
     id: "region",
-    title: "NCP 인증",
+    title: "NCP 리전 연결",
     service: "Region metadata",
-    cost: "0 KRW 예상",
+    cost: "0원 예상",
     endpoint: "/api/ncp/region-smoke",
+    dryRunSummary: "서명 요청 계획만 만듭니다.",
+    executeSummary: "리전 목록을 읽어 실제 API 연결을 확인합니다.",
     icon: Cloud,
     accent: "green",
   },
   {
     id: "cost",
-    title: "비용 스냅샷",
+    title: "이번 달 비용 조회",
     service: "Billing / Cost",
-    cost: "0 KRW 예상",
+    cost: "0원 예상",
     endpoint: "/api/ncp/cost-snapshot",
+    dryRunSummary: "월별 비용 조회 요청을 확인합니다.",
+    executeSummary: "선택한 달의 청구 금액을 읽습니다.",
     icon: CreditCard,
     accent: "blue",
   },
   {
     id: "object-storage",
-    title: "Object Storage",
-    service: "Bucket + tiny object",
-    cost: "Tier 1, 1,000 KRW 이하",
+    title: "Object Storage 왕복",
+    service: "임시 버킷 + 작은 객체",
+    cost: "1,000원 이하 상한",
     endpoint: "/api/ncp/object-storage-smoke",
+    dryRunSummary: "생성·검증·삭제 순서를 확인합니다.",
+    executeSummary: "임시 객체를 만들고 확인한 뒤 바로 지웁니다.",
     icon: Database,
     accent: "amber",
+  },
+  {
+    id: "clova-studio",
+    title: "HyperCLOVA X 추출",
+    service: "CLOVA Studio",
+    cost: "1회 · 1,000원 이하 상한",
+    endpoint: "/api/ncp/clova-studio-smoke",
+    dryRunSummary: "합성 라벨과 120-token 요청을 확인합니다.",
+    executeSummary: "합성 라벨에서 성분·함량·단위를 JSON으로 추출합니다.",
+    icon: FileSearch,
+    accent: "blue",
   },
 ];
 
@@ -101,6 +150,8 @@ const envLabels = [
   "NCP_BILLING_API_ENDPOINT",
   "NCP_OBJECT_STORAGE_ENDPOINT",
   "NCP_OBJECT_STORAGE_ACCESS_KEY_ID",
+  "NCP_CLOVASTUDIO_API_KEY",
+  "NCP_CLOVASTUDIO_BASE_URL",
   "DASHBOARD_RUN_TOKEN",
 ];
 
@@ -128,7 +179,7 @@ function Badge({
 
 function formatTotals(totals?: Record<string, number>) {
   if (!totals || Object.keys(totals).length === 0) {
-    return "No rows";
+    return "조회 결과 없음";
   }
 
   return Object.entries(totals)
@@ -136,17 +187,18 @@ function formatTotals(totals?: Record<string, number>) {
     .join(", ");
 }
 
+function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === "AbortError";
+}
+
 export function DashboardConsole({ initialConfig }: { initialConfig: ConfigStatus }) {
   const [config, setConfig] = useState<ConfigStatus | null>(initialConfig);
   const [result, setResult] = useState<RunResult | null>(null);
   const [running, setRunning] = useState<string | null>(null);
-  const [runToken, setRunToken] = useState(() => {
-    if (typeof window === "undefined") {
-      return "";
-    }
-
-    return window.localStorage.getItem("cloud-credit-run-token") ?? "";
-  });
+  const [tokenSaved, setTokenSaved] = useState(false);
+  const storedRunToken = useSyncExternalStore(subscribeRunToken, readRunToken, readServerRunToken);
+  const [draftRunToken, setDraftRunToken] = useState<string | null>(null);
+  const runToken = draftRunToken ?? storedRunToken;
   const [month, setMonth] = useState(currentMonth());
 
   useEffect(() => {
@@ -154,22 +206,48 @@ export function DashboardConsole({ initialConfig }: { initialConfig: ConfigStatu
   }, []);
 
   async function refreshStatus() {
-    const response = await fetch("/api/config/status", { cache: "no-store" });
-    const payload = (await response.json()) as { status: ConfigStatus };
-    setConfig(payload.status);
+    try {
+      const response = await fetch("/api/config/status", { cache: "no-store" });
+      const payload = (await response.json()) as { status: ConfigStatus };
+      setConfig(payload.status);
+    } catch (error) {
+      setResult({
+        ok: false,
+        title: "상태 새로고침 실패",
+        message: error instanceof Error ? error.message : "서버 상태를 읽지 못했습니다.",
+      });
+    }
   }
 
   function saveToken() {
-    window.localStorage.setItem("cloud-credit-run-token", runToken);
+    window.localStorage.setItem(RUN_TOKEN_STORAGE_KEY, runToken);
+    window.dispatchEvent(new Event(RUN_TOKEN_EVENT));
+    setDraftRunToken(null);
+    setTokenSaved(true);
   }
 
   async function runExperiment(experiment: Experiment, mode: "dry-run" | "execute") {
-    setRunning(`${experiment.id}:${mode}`);
-    setResult(null);
+    const runKey = `${experiment.id}:${mode}`;
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+    setTokenSaved(false);
+    setRunning(runKey);
+    setResult({
+      ok: true,
+      title: `${experiment.title} 실행 중`,
+      mode,
+      message:
+        mode === "dry-run"
+          ? experiment.dryRunSummary
+          : `${experiment.executeSummary} 서버 응답을 기다리고 있습니다.`,
+      steps: [{ label: "서버 API 경로로 요청 전송", status: "planned" }],
+    });
 
     try {
       const response = await fetch(experiment.endpoint, {
         method: "POST",
+        cache: "no-store",
         headers: {
           "content-type": "application/json",
           ...(runToken ? { "x-dashboard-run-token": runToken } : {}),
@@ -178,16 +256,26 @@ export function DashboardConsole({ initialConfig }: { initialConfig: ConfigStatu
           mode,
           ...(experiment.id === "cost" ? { month } : {}),
         }),
+        signal: controller.signal,
       });
       const payload = (await response.json()) as RunResult;
-      setResult(payload);
+      setResult({
+        ...payload,
+        httpStatus: payload.httpStatus ?? response.status,
+        ok: payload.ok && response.ok,
+      });
     } catch (error) {
       setResult({
         ok: false,
-        title: "Request failed",
-        message: error instanceof Error ? error.message : "Unknown client error",
+        title: "요청 실패",
+        message: isAbortError(error)
+          ? `${REQUEST_TIMEOUT_MS / 1000}초 동안 응답이 없습니다. 서버 로그를 확인한 뒤 다시 시도하세요.`
+          : error instanceof Error
+            ? error.message
+            : "알 수 없는 클라이언트 오류",
       });
     } finally {
+      window.clearTimeout(timeoutId);
       setRunning(null);
     }
   }
@@ -202,9 +290,10 @@ export function DashboardConsole({ initialConfig }: { initialConfig: ConfigStatu
       ? "ok"
       : "blocked"
     : "warn";
+  const executeNeedsToken = Boolean(config?.runTokenRequired && !runToken);
 
   return (
-    <main className="app-shell">
+    <section className="console-shell" id="experiments" aria-labelledby="console-title">
       <header className="topbar">
         <div className="brand">
           <div className="brand-mark" aria-hidden="true">
@@ -212,7 +301,7 @@ export function DashboardConsole({ initialConfig }: { initialConfig: ConfigStatu
           </div>
           <div>
             <p className="eyebrow">Cloud Credit Lab</p>
-            <h1>크레딧 실험 콘솔</h1>
+            <h2 id="console-title">연결 실험 콘솔</h2>
           </div>
         </div>
         <div className="top-actions">
@@ -232,14 +321,14 @@ export function DashboardConsole({ initialConfig }: { initialConfig: ConfigStatu
           <div className="metric-label">
             <span>NCP 연결</span>
             <Badge tone={config?.present.NCP_ACCESS_KEY_ID ? "ok" : "blocked"}>
-              {config?.present.NCP_ACCESS_KEY_ID ? "Ready" : "Missing"}
+              {config?.present.NCP_ACCESS_KEY_ID ? "준비됨" : "키 없음"}
             </Badge>
           </div>
           <p className="metric-value">API Gateway</p>
         </div>
         <div className="metric">
           <div className="metric-label">
-            <span>비용 확인</span>
+            <span>비용 조회</span>
             <Badge tone={config?.present.NCP_BILLING_API_ENDPOINT ? "ok" : "blocked"}>
               Billing
             </Badge>
@@ -251,14 +340,14 @@ export function DashboardConsole({ initialConfig }: { initialConfig: ConfigStatu
             <span>실행 보호</span>
             <Badge tone={tokenTone}>{config?.runTokenRequired ? "Token" : "Local"}</Badge>
           </div>
-          <p className="metric-value">{config?.runTokenRequired ? "Locked" : "Open"}</p>
+          <p className="metric-value">{config?.runTokenRequired ? "잠김" : "로컬 허용"}</p>
         </div>
         <div className="metric">
           <div className="metric-label">
-            <span>환경변수</span>
+            <span>환경 변수</span>
             <Badge tone={envReadyCount >= 5 ? "ok" : "warn"}>{envReadyCount}/{envLabels.length}</Badge>
           </div>
-          <p className="metric-value">Server only</p>
+          <p className="metric-value">서버 전용</p>
         </div>
       </section>
 
@@ -266,12 +355,12 @@ export function DashboardConsole({ initialConfig }: { initialConfig: ConfigStatu
         <section className="panel" aria-labelledby="experiments-title">
           <div className="panel-header">
             <div>
-              <h2 id="experiments-title">Playground</h2>
-              <p className="subtle">Dry run이 기본값이고 실행은 서버 API에서만 처리됩니다.</p>
+              <h2 id="experiments-title">안전한 연결 실험</h2>
+              <p className="subtle">계획 보기는 비용이 들지 않고, 실행만 서버에서 API를 호출합니다.</p>
             </div>
             <Badge tone="ok">
               <ShieldCheck size={14} aria-hidden="true" />
-              secret hidden
+              비밀값 숨김
             </Badge>
           </div>
           <div className="panel-body">
@@ -280,6 +369,7 @@ export function DashboardConsole({ initialConfig }: { initialConfig: ConfigStatu
                 const Icon = experiment.icon;
                 const dryRunKey = `${experiment.id}:dry-run`;
                 const executeKey = `${experiment.id}:execute`;
+                const executeDisabled = running !== null || executeNeedsToken;
 
                 return (
                   <article className="experiment-card" key={experiment.id}>
@@ -288,7 +378,7 @@ export function DashboardConsole({ initialConfig }: { initialConfig: ConfigStatu
                         <h3>{experiment.title}</h3>
                         <p className="subtle">{experiment.service}</p>
                       </div>
-                      <div className="experiment-icon" aria-hidden="true">
+                      <div className={`experiment-icon experiment-icon-${experiment.accent}`} aria-hidden="true">
                         <Icon size={18} />
                       </div>
                     </div>
@@ -296,6 +386,8 @@ export function DashboardConsole({ initialConfig }: { initialConfig: ConfigStatu
                       <span>
                         <strong className="mono">{experiment.cost}</strong>
                       </span>
+                      <span>{experiment.dryRunSummary}</span>
+                      <span>{experiment.executeSummary}</span>
                       {experiment.id === "cost" ? (
                         <label className="field">
                           <span>조회 월</span>
@@ -310,9 +402,7 @@ export function DashboardConsole({ initialConfig }: { initialConfig: ConfigStatu
                             value={month}
                           />
                         </label>
-                      ) : (
-                        <span>생성 리소스는 없거나 실행 직후 정리됩니다.</span>
-                      )}
+                      ) : null}
                     </div>
                     <div className="experiment-actions">
                       <button
@@ -324,7 +414,7 @@ export function DashboardConsole({ initialConfig }: { initialConfig: ConfigStatu
                         data-title={experiment.title}
                         disabled={running !== null}
                         onClick={() => runExperiment(experiment, "dry-run")}
-                        title={`${experiment.title} dry run`}
+                        title={`${experiment.title} 계획 보기`}
                         type="button"
                       >
                         {running === dryRunKey ? (
@@ -332,7 +422,7 @@ export function DashboardConsole({ initialConfig }: { initialConfig: ConfigStatu
                         ) : (
                           <Eye size={16} aria-hidden="true" />
                         )}
-                        Dry run
+                        계획 보기
                       </button>
                       <button
                         className="button button-primary"
@@ -341,9 +431,13 @@ export function DashboardConsole({ initialConfig }: { initialConfig: ConfigStatu
                         data-mode="execute"
                         data-run-experiment="true"
                         data-title={experiment.title}
-                        disabled={running !== null}
+                        disabled={executeDisabled}
                         onClick={() => runExperiment(experiment, "execute")}
-                        title={`${experiment.title} execute`}
+                        title={
+                          executeNeedsToken
+                            ? "실행 전에 run token을 입력하고 저장하세요"
+                            : `${experiment.title} 실행`
+                        }
                         type="button"
                       >
                         {running === executeKey ? (
@@ -364,23 +458,23 @@ export function DashboardConsole({ initialConfig }: { initialConfig: ConfigStatu
         <aside className="panel" aria-labelledby="result-title">
           <div className="panel-header">
             <div>
-              <h2 id="result-title">Run Result</h2>
-              <p className="subtle">최근 실행 결과</p>
+              <h2 id="result-title">실행 결과</h2>
+              <p className="subtle">가장 최근 요청</p>
             </div>
             {result ? (
               <Badge tone={result.ok ? "ok" : "blocked"}>
                 {result.ok ? <BadgeCheck size={14} /> : <AlertTriangle size={14} />}
-                {result.ok ? "OK" : "Blocked"}
+                {result.ok ? "완료" : "차단됨"}
               </Badge>
             ) : null}
           </div>
-          <div className="panel-body" id="run-result-content">
+          <div className="panel-body" id="run-result-content" aria-live="polite">
             {result ? (
               <div className="result">
                 <div className="result-header">
                   <div className="result-title">
-                    <h3>{result.title ?? "Result"}</h3>
-                    <p className="subtle">{result.message ?? result.costCap ?? "Completed"}</p>
+                    <h3>{result.title ?? "결과"}</h3>
+                    <p className="subtle">{result.message ?? result.costCap ?? "완료"}</p>
                   </div>
                   <Badge tone={result.mode === "execute" ? "warn" : "neutral"}>
                     {result.mode ?? "client"}
@@ -416,44 +510,64 @@ export function DashboardConsole({ initialConfig }: { initialConfig: ConfigStatu
                   ) : null}
                   {result.regions ? (
                     <div className="detail-row">
-                      <span>Regions</span>
+                      <span>리전</span>
                       <strong>{result.regions.join(", ")}</strong>
                     </div>
                   ) : null}
                   {result.month ? (
                     <div className="detail-row">
-                      <span>Month</span>
+                      <span>조회 월</span>
                       <strong>{result.month}</strong>
                     </div>
                   ) : null}
                   {result.rowCount !== undefined ? (
                     <div className="detail-row">
-                      <span>Billing rows</span>
+                      <span>비용 행</span>
                       <strong>{result.rowCount}</strong>
                     </div>
                   ) : null}
                   {result.totals ? (
                     <div className="detail-row">
-                      <span>Demand</span>
+                      <span>청구 금액</span>
                       <strong>{formatTotals(result.totals)}</strong>
                     </div>
                   ) : null}
                   {result.credentialsKind ? (
                     <div className="detail-row">
-                      <span>Credentials</span>
+                      <span>자격 증명</span>
                       <strong>{result.credentialsKind}</strong>
                     </div>
                   ) : null}
                   {result.bucketName ? (
                     <div className="detail-row">
-                      <span>Bucket</span>
+                      <span>버킷</span>
                       <strong>{result.bucketName}</strong>
                     </div>
                   ) : null}
                   {result.objectName ? (
                     <div className="detail-row">
-                      <span>Object</span>
+                      <span>객체</span>
                       <strong>{result.objectName}</strong>
+                    </div>
+                  ) : null}
+                  {result.model ? (
+                    <div className="detail-row">
+                      <span>모델</span>
+                      <strong>{result.model}</strong>
+                    </div>
+                  ) : null}
+                  {result.usage ? (
+                    <div className="detail-row">
+                      <span>토큰</span>
+                      <strong>
+                        입력 {result.usage.prompt_tokens ?? "-"} · 출력 {result.usage.completion_tokens ?? "-"}
+                      </strong>
+                    </div>
+                  ) : null}
+                  {result.output ? (
+                    <div className="detail-row">
+                      <span>추출 결과</span>
+                      <strong className="result-output">{result.output}</strong>
                     </div>
                   ) : null}
                 </div>
@@ -462,7 +576,7 @@ export function DashboardConsole({ initialConfig }: { initialConfig: ConfigStatu
               <div className="empty-state">
                 <div>
                   <Activity size={28} aria-hidden="true" />
-                  <p>실행 결과가 여기에 표시됩니다.</p>
+                  <p>계획 보기나 실행을 누르면 요청 내용과 결과가 여기에 나옵니다.</p>
                 </div>
               </div>
             )}
@@ -470,26 +584,30 @@ export function DashboardConsole({ initialConfig }: { initialConfig: ConfigStatu
         </aside>
       </div>
 
-      <section className="panel" aria-labelledby="settings-title" style={{ marginTop: 18 }}>
+      <section className="panel settings-panel" aria-labelledby="settings-title">
         <div className="panel-header">
           <div>
-            <h2 id="settings-title">Server Settings</h2>
-            <p className="subtle">값은 노출하지 않고 존재 여부만 확인합니다.</p>
+            <h2 id="settings-title">서버 설정</h2>
+            <p className="subtle">값은 보여주지 않고 설정 여부만 확인합니다.</p>
           </div>
           <Badge tone={config?.deployed ? "warn" : "ok"}>
-            {config?.deployed ? "Vercel" : "Local"}
+            {config?.environment === "vercel"
+              ? "Vercel"
+              : config?.environment === "production"
+                ? "Production"
+                : "로컬"}
           </Badge>
         </div>
         <div className="panel-body settings">
           <div className="field">
             <label htmlFor="run-token">
-              <KeyRound size={14} aria-hidden="true" /> Run token
+              <KeyRound size={14} aria-hidden="true" /> 실행 토큰
             </label>
             <div className="input-row">
               <input
                 className="input mono"
                 id="run-token"
-                onChange={(event) => setRunToken(event.target.value)}
+                onChange={(event) => setDraftRunToken(event.target.value)}
                 placeholder="DASHBOARD_RUN_TOKEN"
                 type="password"
                 value={runToken}
@@ -504,6 +622,7 @@ export function DashboardConsole({ initialConfig }: { initialConfig: ConfigStatu
                 저장
               </button>
             </div>
+            {tokenSaved ? <p className="subtle">이 브라우저에 토큰을 저장했습니다.</p> : null}
           </div>
           <div className="env-list">
             {envLabels.map((key) => {
@@ -512,13 +631,13 @@ export function DashboardConsole({ initialConfig }: { initialConfig: ConfigStatu
               return (
                 <div className="env-row" key={key}>
                   <span className="mono">{key}</span>
-                  <Badge tone={present ? "ok" : "warn"}>{present ? "set" : "empty"}</Badge>
+                  <Badge tone={present ? "ok" : "warn"}>{present ? "설정됨" : "비어 있음"}</Badge>
                 </div>
               );
             })}
           </div>
         </div>
       </section>
-    </main>
+    </section>
   );
 }

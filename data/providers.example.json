@@ -2,11 +2,13 @@
   {
     "id": "naver-cloud-platform",
     "displayName": "Naver Cloud Platform",
-    "status": "active",
+    "status": "ready",
     "credit": {
       "amount": 5300000,
       "currency": "KRW",
-      "expiresOn": null
+      "expiresOn": "2027-04-30",
+      "urgentAmount": 300000,
+      "urgentExpiresOn": "2026-07-31"
     },
     "envVars": [
       "NCP_ACCESS_KEY_ID",
@@ -26,17 +28,23 @@
   {
     "id": "kakao-cloud",
     "displayName": "Kakao Cloud",
-    "status": "planned",
+    "status": "credentials-blocked",
     "credit": {
-      "amount": null,
+      "amount": 10000000,
       "currency": "KRW",
-      "expiresOn": null
+      "expiresOn": "2027-05-31",
+      "programAwardedAmount": 20000000
     },
     "envVars": [
       "KAKAO_CLOUD_ACCESS_KEY_ID",
       "KAKAO_CLOUD_SECRET_ACCESS_KEY",
       "KAKAO_CLOUD_REGION"
     ],
-    "serviceCandidates": []
+    "serviceCandidates": [
+      "GPU Virtual Machine",
+      "Kubeflow",
+      "Object Storage",
+      "Advanced Managed Search"
+    ]
   }
 ]

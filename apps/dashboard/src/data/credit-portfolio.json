@@ -1,0 +1,285 @@
+{
+  "schemaVersion": 1,
+  "asOf": "2026-07-10",
+  "confirmedIssuedKrw": 15300000,
+  "providers": [
+    {
+      "id": "naver-cloud-platform",
+      "displayName": "네이버클라우드",
+      "confirmedIssuedKrw": 5300000,
+      "potentialAdditionalKrw": 5000000,
+      "status": "ready",
+      "grants": [
+        {
+          "id": "ncp-new-customer-plus",
+          "name": "Credit Discount to New Customers Plus",
+          "amountKrw": 300000,
+          "startsOn": "2026-04-28",
+          "expiresOn": "2026-07-31",
+          "status": "issued",
+          "evidence": "2026-04-28 발급 메일 및 2026-07-01 만료 예정 메일"
+        },
+        {
+          "id": "ncp-greenhouse-track-1",
+          "name": "Greenhouse Track 1 first grant",
+          "amountKrw": 5000000,
+          "startsOn": "2026-05-01",
+          "expiresOn": "2027-04-30",
+          "status": "issued",
+          "evidence": "2026-05-04 크레딧 부여 메일"
+        }
+      ],
+      "nextUnlock": "Track 1 사용 근거와 계획을 정리해 추가 5,000,000원 신청",
+      "blockers": [
+        "CLOVA Studio API 키 미발급",
+        "CLOVA OCR/Speech 도메인 미생성"
+      ]
+    },
+    {
+      "id": "kakao-cloud",
+      "displayName": "카카오클라우드",
+      "confirmedIssuedKrw": 10000000,
+      "programAwardedKrw": 20000000,
+      "potentialUnissuedKrw": 10000000,
+      "status": "credentials-blocked",
+      "grants": [
+        {
+          "id": "kakao-rocket-launcher-issued",
+          "name": "Rocket Launcher Boost issued credit",
+          "amountKrw": 10000000,
+          "startsOn": "2026-05-28",
+          "expiresOn": "2027-05-31",
+          "status": "issued",
+          "evidence": "2026-05-28 무료 크레딧 발급 메일"
+        }
+      ],
+      "nextUnlock": "Boost 20,000,000원 선정액 중 미발급 10,000,000원 지급 조건 확인",
+      "blockers": [
+        "IAM access key ID/secret 미발급",
+        "S3 자격 증명 미발급"
+      ]
+    }
+  ],
+  "allocations": [
+    {
+      "id": "ncp-urgent-202607",
+      "providerId": "naver-cloud-platform",
+      "grantId": "ncp-new-customer-plus",
+      "title": "7월 안에 결과가 남는 AI 실험",
+      "totalCapKrw": 300000,
+      "items": [
+        {
+          "label": "제품 라벨·연구 문서 OCR 평가",
+          "capKrw": 120000
+        },
+        {
+          "label": "HyperCLOVA X 추출·요약 평가",
+          "capKrw": 100000
+        },
+        {
+          "label": "녹화물 Speech 전사 평가",
+          "capKrw": 30000
+        },
+        {
+          "label": "Object Storage·Functions 연결",
+          "capKrw": 20000
+        },
+        {
+          "label": "오류 재시도·예비비",
+          "capKrw": 30000
+        }
+      ]
+    },
+    {
+      "id": "ncp-greenhouse-year",
+      "providerId": "naver-cloud-platform",
+      "grantId": "ncp-greenhouse-track-1",
+      "title": "공용 문서·근거 처리 기반",
+      "totalCapKrw": 5000000,
+      "items": [
+        {
+          "label": "OCR·HyperCLOVA 근거 추출",
+          "capKrw": 1500000
+        },
+        {
+          "label": "공용 Object Storage·배치 작업",
+          "capKrw": 750000
+        },
+        {
+          "label": "검색·임베딩 비교",
+          "capKrw": 750000
+        },
+        {
+          "label": "Functions·단기 컴퓨트",
+          "capKrw": 500000
+        },
+        {
+          "label": "프로젝트별 PoC",
+          "capKrw": 1000000
+        },
+        {
+          "label": "예비비",
+          "capKrw": 500000
+        }
+      ]
+    },
+    {
+      "id": "kakao-boost-issued",
+      "providerId": "kakao-cloud",
+      "grantId": "kakao-rocket-launcher-issued",
+      "title": "로컬에서 오래 걸리는 R&D 계산 이전",
+      "totalCapKrw": 10000000,
+      "items": [
+        {
+          "label": "GPU 단기 학습·replay·평가",
+          "capKrw": 4000000
+        },
+        {
+          "label": "Kubeflow 1회 bounded workflow",
+          "capKrw": 2000000
+        },
+        {
+          "label": "Object Storage·벡터 검색",
+          "capKrw": 1500000
+        },
+        {
+          "label": "모델 serving 부하 비교",
+          "capKrw": 1500000
+        },
+        {
+          "label": "예비비",
+          "capKrw": 1000000
+        }
+      ]
+    }
+  ],
+  "opportunities": [
+    {
+      "priority": 1,
+      "projects": [
+        "nutrition-safety-engine",
+        "otc-nutrient-safety-engine"
+      ],
+      "providerId": "naver-cloud-platform",
+      "services": [
+        "CLOVA OCR",
+        "CLOVA Studio"
+      ],
+      "title": "제품 라벨을 근거 데이터 후보로 바꾸기",
+      "why": "이미 결정적 안전 규칙과 근거 스키마가 있어 OCR·추출 정확도를 바로 측정할 수 있습니다.",
+      "pilot": "제품 라벨 이미지 30건을 OCR하고 성분명·함량·단위 추출 정확도를 기존 수작업 기준과 비교",
+      "budgetCapKrw": 120000,
+      "readiness": "next",
+      "stopRule": "필드 정확도 90% 미만이거나 건당 검수 시간이 수작업보다 길면 중단"
+    },
+    {
+      "priority": 2,
+      "projects": [
+        "company-work-capture",
+        "cloud-credit-lab"
+      ],
+      "providerId": "naver-cloud-platform",
+      "services": [
+        "CLOVA OCR",
+        "CLOVA Studio",
+        "Object Storage"
+      ],
+      "title": "TIPS·회사 문서를 검색 가능한 작업 기록으로 만들기",
+      "why": "문서 수집·정리 목적과 맞고 PDF·이미지·보고서 결과물을 공용 저장소에 남길 수 있습니다.",
+      "pilot": "민감정보가 없는 샘플 문서 20건에서 과제·근거·기한·담당 필드를 추출",
+      "budgetCapKrw": 100000,
+      "readiness": "next",
+      "stopRule": "근거 위치 추적이 안 되거나 핵심 필드 정확도 90% 미만이면 자동 반영 금지"
+    },
+    {
+      "priority": 3,
+      "projects": [
+        "wellnessbox-rnd"
+      ],
+      "providerId": "kakao-cloud",
+      "services": [
+        "GPU Virtual Machine",
+        "Kubeflow",
+        "Object Storage"
+      ],
+      "title": "480-case replay와 학습 실험을 짧게 병렬화하기",
+      "why": "frozen eval과 replay 지표가 이미 있어 GPU 이전 전후 시간·비용·결과를 재현 가능하게 비교할 수 있습니다.",
+      "pilot": "현재 고정 cohort 한 개만 컨테이너로 실행하고 종료 후 인스턴스를 자동 삭제",
+      "budgetCapKrw": 500000,
+      "readiness": "blocked",
+      "stopRule": "로컬 대비 3배 이상 빨라지지 않거나 재현 지표가 달라지면 확장 금지"
+    },
+    {
+      "priority": 4,
+      "projects": [
+        "insane-search-testbed"
+      ],
+      "providerId": "kakao-cloud",
+      "services": [
+        "Advanced Managed Search",
+        "Object Storage"
+      ],
+      "title": "한국어 검색·벡터 검색 품질 비교하기",
+      "why": "검색 테스트베드가 이미 있어 관리형 검색의 품질과 운영 부담을 같은 질의 세트로 비교할 수 있습니다.",
+      "pilot": "고정 질의 100개와 소형 문서 corpus로 로컬 검색 대비 recall·latency 측정",
+      "budgetCapKrw": 300000,
+      "readiness": "blocked",
+      "stopRule": "recall 개선이 5%p 미만이고 운영 비용만 늘면 중단"
+    },
+    {
+      "priority": 5,
+      "projects": [
+        "window-back-recorder"
+      ],
+      "providerId": "naver-cloud-platform",
+      "services": [
+        "CLOVA Speech",
+        "Object Storage"
+      ],
+      "title": "녹화 파일에 검색 가능한 전사본 붙이기",
+      "why": "긴 영상·타임스탬프·배치 전사를 지원해 녹화 아카이브를 다시 찾기 쉬워집니다.",
+      "pilot": "민감정보가 없는 10분 이내 녹화 3개를 전사하고 키워드 검색 가능 여부 확인",
+      "budgetCapKrw": 30000,
+      "readiness": "later",
+      "stopRule": "한국어 고유명사 보정 후에도 검색용 정확도가 부족하면 중단"
+    },
+    {
+      "priority": 6,
+      "projects": [
+        "n8n-youtube-shorts-automation"
+      ],
+      "providerId": "naver-cloud-platform",
+      "services": [
+        "Object Storage"
+      ],
+      "title": "완성본과 생성 원본을 저비용으로 보관하기",
+      "why": "현재 영상은 정적 카드와 BGM이므로 Speech나 Voice보다 결과물 아카이브가 실제 구조에 맞습니다.",
+      "pilot": "공개 완료된 MP4와 생성 메타데이터 10세트만 보관하고 복원 시간을 측정",
+      "budgetCapKrw": 20000,
+      "readiness": "later",
+      "stopRule": "로컬·Drive 백업보다 복원 절차가 복잡하면 중단"
+    }
+  ],
+  "completedChecks": [
+    "NCP Region API HTTP 200",
+    "NCP 2026-07 billing snapshot 0 KRW",
+    "NCP Object Storage create/put/get/delete 성공"
+  ],
+  "doNotSpendOn": [
+    "기존 Vercel 앱을 이유 없이 VM으로 이전",
+    "항상 켜진 GPU·Kubernetes 클러스터",
+    "평가 데이터가 없는 생성형 AI 데모",
+    "n8n 쇼츠 워크플로에 TTS를 다시 추가",
+    "마켓플레이스·유료 OS 이미지처럼 크레딧 적용이 제외된 항목"
+  ],
+  "officialReferences": [
+    "https://guide.ncloud-docs.com/docs/clovastudio-overview",
+    "https://guide.ncloud-docs.com/docs/clovaocr-overview",
+    "https://guide.ncloud-docs.com/docs/clovaspeech-overview",
+    "https://guide.ncloud-docs.com/docs/cloudfunctions-overview",
+    "https://guide.ncloud-docs.com/docs/en/storage-storage-6-1",
+    "https://docs.kakaocloud.com/service/ai-service/kubeflow/kubeflow-overview",
+    "https://docs.kakaocloud.com/service/storage/object-storage/object-storage-overview",
+    "https://kakaocloud.com/services/virtual-machine/intro"
+  ]
+}

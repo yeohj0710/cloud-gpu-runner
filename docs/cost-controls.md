@@ -29,3 +29,9 @@ This repo can spend cloud credits for real tests, but every experiment should be
    - Object Storage: create one test bucket/object, then delete it.
    - CLOVA Studio: summarize one short sample text with a small token cap.
    - OCR/document extraction: run one short sample document only.
+
+## Current next path
+
+1. NCP: subscribe to Cloud Functions, then add hello-world create/invoke/delete smoke test.
+2. NCP: subscribe to CLOVA Studio only when ready to run one token-capped prompt.
+3. KakaoCloud: create a project, assign the current user as Project Admin, issue an IAM access key, then run `npm run kakao:token:execute`.

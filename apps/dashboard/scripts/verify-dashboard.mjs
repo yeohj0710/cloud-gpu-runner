@@ -1,4 +1,3 @@
-import { spawn } from "node:child_process";
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { setTimeout as wait } from "node:timers/promises";
@@ -6,13 +5,26 @@ import { setTimeout as wait } from "node:timers/promises";
 import { chromium } from "playwright";
 
 const port = process.env.DASHBOARD_VERIFY_PORT ?? "3017";
-const baseUrl = `http://localhost:${port}`;
+const baseUrl = `http://127.0.0.1:${port}`;
 const outputDir = resolve(process.cwd(), ".next");
+const executeLive = process.env.DASHBOARD_VERIFY_EXECUTE === "1";
+const runToken = process.env.DASHBOARD_RUN_TOKEN ?? "";
+
+async function fetchWithTimeout(url, timeoutMs = 1500) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, { signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
 async function waitForServer() {
-  for (let i = 0; i < 35; i += 1) {
+  for (let i = 0; i < 45; i += 1) {
     try {
-      const response = await fetch(`${baseUrl}/api/config/status`);
+      const response = await fetchWithTimeout(`${baseUrl}/api/config/status`);
 
       if (response.ok) {
         return;
@@ -27,62 +39,109 @@ async function waitForServer() {
   throw new Error(`Dashboard did not become ready at ${baseUrl}`);
 }
 
+async function runDryRun(page, cardIndex, expectedTitle) {
+  const card = page.locator(".experiment-card").nth(cardIndex);
+
+  await card.locator('[data-run-experiment="true"][data-mode="dry-run"]').click();
+  await page.getByText(expectedTitle).first().waitFor({ timeout: 15_000 });
+}
+
 async function verifyInBrowser() {
   await mkdir(outputDir, { recursive: true });
 
+  console.log("Launching Chromium...");
   const browser = await chromium.launch();
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  console.log("Chromium launched.");
   const consoleErrors = [];
 
-  page.on("console", (message) => {
-    if (message.type() === "error") {
-      consoleErrors.push(message.text());
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+
+    if (executeLive) {
+      if (!runToken) {
+        throw new Error(
+          "DASHBOARD_RUN_TOKEN is required when DASHBOARD_VERIFY_EXECUTE=1.",
+        );
+      }
+
+      await page.addInitScript((token) => {
+        window.localStorage.setItem("cloud-credit-run-token", token);
+      }, runToken);
     }
-  });
 
-  await page.goto(baseUrl, { waitUntil: "networkidle" });
-  await page.locator("h1").first().waitFor();
-  await page.screenshot({
-    path: resolve(outputDir, "dashboard-desktop.png"),
-    fullPage: true,
-  });
+    page.setDefaultTimeout(15_000);
+    page.on("console", (message) => {
+      if (message.type() === "error") {
+        consoleErrors.push(message.text());
+      }
+    });
 
-  const firstCard = page.locator(".experiment-card").nth(0);
-  await firstCard.getByRole("button", { name: "Dry run" }).click();
-  await page.getByText("NCP region smoke test").first().waitFor();
-  await firstCard.locator(".button-primary").click();
-  await page.getByText("KR, SGN, JPN").first().waitFor({ timeout: 15000 });
+    console.log(`Opening ${baseUrl}...`);
+    await page.goto(baseUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    console.log("Dashboard document loaded.");
+    await page.locator("h1").first().waitFor();
+    await page.getByRole("heading", { name: "남은 크레딧, 먼저 쓸 곳이 정해졌어요" }).waitFor();
+    await page.getByRole("heading", { name: /15,300,000원/ }).waitFor();
+    await page.getByText("nutrition-safety-engine", { exact: true }).first().waitFor();
 
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({
-    path: resolve(outputDir, "dashboard-mobile.png"),
-    fullPage: true,
-  });
+    if (!executeLive) {
+      const blockedResponse = await page.request.post(`${baseUrl}/api/ncp/region-smoke`, {
+        data: { mode: "execute" },
+      });
 
-  await browser.close();
+      if (blockedResponse.status() !== 403) {
+        throw new Error(
+          `Production execute guard returned ${blockedResponse.status()}, expected 403.`,
+        );
+      }
+    }
+
+    await page.screenshot({
+      path: resolve(outputDir, "dashboard-desktop.png"),
+      caret: "initial",
+      fullPage: true,
+    });
+    console.log("Desktop screenshot saved.");
+
+    console.log("Checking safe dry-run buttons...");
+    await runDryRun(page, 0, "NCP region smoke test");
+    await runDryRun(page, 1, "NCP cost snapshot");
+    await runDryRun(page, 2, "NCP Object Storage smoke test");
+    await runDryRun(page, 3, "NCP CLOVA Studio smoke test");
+
+    if (executeLive) {
+      console.log("DASHBOARD_VERIFY_EXECUTE=1 set; checking the region execute button...");
+      const firstCard = page.locator(".experiment-card").nth(0);
+      await firstCard.getByRole("button", { name: "실행" }).click();
+      await page.getByText("NCP region smoke test").first().waitFor({ timeout: 30_000 });
+    }
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    const horizontalOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+
+    if (horizontalOverflow > 1) {
+      throw new Error(`Mobile horizontal overflow: ${horizontalOverflow}px`);
+    }
+
+    await page.screenshot({
+      path: resolve(outputDir, "dashboard-mobile.png"),
+      caret: "initial",
+      fullPage: true,
+    });
+    console.log("Mobile screenshot saved.");
+
+  } finally {
+    await browser.close();
+  }
 
   if (consoleErrors.length > 0) {
     throw new Error(`Browser console errors:\n${consoleErrors.join("\n")}`);
   }
 }
 
-const server = spawn(
-  process.execPath,
-  ["node_modules/next/dist/bin/next", "dev", "--port", port],
-  {
-    cwd: process.cwd(),
-    stdio: ["ignore", "pipe", "pipe"],
-  },
-);
-
-let logs = "";
-
-server.stdout.on("data", (chunk) => {
-  logs += chunk.toString();
-});
-server.stderr.on("data", (chunk) => {
-  logs += chunk.toString();
-});
+console.log(`Checking dashboard at ${baseUrl}`);
 
 try {
   await waitForServer();
@@ -90,8 +149,7 @@ try {
   console.log(`Dashboard verification OK: ${baseUrl}`);
 } catch (error) {
   console.error(error instanceof Error ? error.message : error);
-  console.error(logs.split(/\r?\n/).slice(-40).join("\n"));
   process.exitCode = 1;
-} finally {
-  server.kill();
 }
+
+process.exit(process.exitCode ?? 0);

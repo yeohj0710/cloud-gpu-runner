@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Cloud Credit Lab",
-  description: "Small, cost-capped cloud credit experiments.",
+  title: "Cloud Credit Lab · 크레딧 활용 대시보드",
+  description: "네이버·카카오 클라우드 크레딧을 프로젝트 성과로 바꾸는 실행 대시보드",
 };
 
 export default function RootLayout({
@@ -24,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="ko"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>

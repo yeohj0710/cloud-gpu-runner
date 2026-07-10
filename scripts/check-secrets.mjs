@@ -2,34 +2,9 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 
-const root = process.cwd();
+import { secretChecks as checks } from "./lib/secret-patterns.mjs";
 
-const checks = [
-  {
-    name: "NCP IAM key literal",
-    pattern: /\bncp_iam_[A-Za-z0-9]{12,}\b/
-  },
-  {
-    name: "NCP access key assignment",
-    pattern: /^[ \t]*NCP_ACCESS_KEY_ID[ \t]*=[ \t]*[^ \t\r\n#]+/m
-  },
-  {
-    name: "NCP secret key assignment",
-    pattern: /^[ \t]*NCP_SECRET_KEY[ \t]*=[ \t]*[^ \t\r\n#]+/m
-  },
-  {
-    name: "NCP CLOVA key assignment",
-    pattern: /^[ \t]*NCP_CLOVASTUDIO_(?:API_KEY|API_GATEWAY_KEY)[ \t]*=[ \t]*[^ \t\r\n#]+/m
-  },
-  {
-    name: "NCP Object Storage key assignment",
-    pattern: /^[ \t]*NCP_OBJECT_STORAGE_(?:ACCESS_KEY_ID|SECRET_KEY)[ \t]*=[ \t]*[^ \t\r\n#]+/m
-  },
-  {
-    name: "Kakao cloud secret assignment",
-    pattern: /^[ \t]*KAKAO_CLOUD_(?:ACCESS_KEY_ID|SECRET_ACCESS_KEY)[ \t]*=[ \t]*[^ \t\r\n#]+/m
-  }
-];
+const root = process.cwd();
 
 function git(args) {
   return execFileSync("git", args, {

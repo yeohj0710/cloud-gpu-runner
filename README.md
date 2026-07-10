@@ -1,90 +1,105 @@
 # Cloud Credit Lab
 
-네이버클라우드플랫폼, 카카오클라우드 등에서 받은 크레딧을 실제로 써보면서
-서비스 후보, API 키, 비용, 실험 결과를 정리하는 연구/회사 R&D repo입니다.
+네이버·카카오 클라우드 크레딧을 실제 프로젝트 성과로 바꾸기 위한 실험 저장소입니다. 모든 유료 호출은 기본값이 dry-run이고, 비용 상한과 중단 기준이 있는 작업만 실행합니다.
 
-## 현재 설계 판단
+## 지금 가진 크레딧
 
-지금은 Next.js/Vercel 앱을 바로 만들지 않습니다.
+| 구분 | 확인된 발급액 | 만료일 | 지금 할 일 |
+| --- | ---: | --- | --- |
+| NCP 신규 크레딧 | 300,000원 | 2026-07-31 | OCR·HyperCLOVA X 평가에 먼저 사용 |
+| NCP Greenhouse | 5,000,000원 | 2027-04-30 | 공용 문서 처리·스토리지·배치 작업 |
+| KakaoCloud Boost | 10,000,000원 | 2027-05-31 | IAM 키 발급 후 R&D GPU 실험 |
 
-이유:
-- 아직 시각화할 데이터 모델과 실험 지표가 확정되지 않았습니다.
-- 먼저 크레딧 만료일, 서비스 후보, API 키, 실험 기록이 안정적으로 쌓여야 합니다.
-- Next.js를 먼저 만들면 대시보드 구조가 실험 방향을 불필요하게 고정할 수 있습니다.
-
-대신 `apps/` 폴더를 비워두었습니다. 나중에 실제로 보여줄 데이터가 생기면
-`apps/dashboard`에 Next.js 앱을 추가하고 Vercel 배포를 붙이면 됩니다.
-
-## 현재 활용 우선순위
-
-1. 연구/지원사업 자료 작업
-   - 실제 대상 폴더: `C:\Users\hjyeo\Desktop\웰박\10 TIPS`
-   - TIPS/R&D 문서, 실험 자료, 보고서, 근거 정리, OCR/요약/추출 자동화 후보
-2. 회사 내부 기능 실험
-   - 문서 처리, 파일 저장, 알림, 관리자용 배치 작업, AI 요약/분류 같은 공통 기능
-3. 서비스 후보 탐색
-   - 여러 클라우드 크레딧을 비교하면서 실제로 재사용 가능한 워크플로우를 찾기
+카카오 Boost 선정 메일의 20,000,000원과 실제 발급 메일의 10,000,000원은 중복 합산하지 않습니다. 현재 확인된 발급액은 총 15,300,000원입니다. 자세한 근거와 배분안은 `apps/dashboard/src/data/credit-portfolio.json`과 `docs/credit-ledger.md`에 있습니다.
 
 ## 빠른 시작
 
 ```powershell
 cd C:\dev\cloud-credit-lab
+npm --prefix apps/dashboard install
 Copy-Item .env.example .env.local
 notepad .env.local
 npm run check:env:naver
+npm test
 ```
 
-`.env.local`은 git에 올라가지 않게 막아두었습니다. 실제 API 키는 그 파일에만 넣으세요.
+실제 키는 `.env.local`에만 둡니다. 이 파일은 Git에서 제외됩니다.
 
-## 로컬 안전장치
+## 자주 쓰는 명령
 
 ```powershell
-npm run check:secrets
 npm run check:safety
-git config core.hooksPath .githooks
+npm run ncp:smoke
+npm run ncp:cost:snapshot
+npm run ncp:object-storage:smoke
+npm run ncp:clova
+npm run dashboard:dev
+npm test
 ```
 
-`check:secrets`는 tracked/staged 파일에 실제 키처럼 보이는 값이 들어갔는지 확인합니다.
-로컬 `.env.local`은 배포/커밋 대상이 아니며, 배포 환경에는 필요한 변수 이름만 별도로 등록하세요.
+`:execute`가 없는 명령은 요청 계획만 보여줍니다.
 
-## 폴더 구조
+## 공용 아티팩트 보관
 
-```text
-apps/dashboard         Next.js 실험 콘솔
-data/                  provider/experiment 예시 데이터
-docs/                  설계 문서와 provider별 메모
-experiments/           실험 기록 템플릿과 실제 실험 노트
-scripts/               로컬 점검 스크립트
-.env.example           필요한 환경변수 이름만 정리한 예시
+`C:\dev` 아래의 평가 보고서나 생성 결과 한 파일을 NCP/KakaoCloud S3 호환 스토리지에 올릴 수 있습니다.
+
+```powershell
+npm run artifact:publish -- --provider naver --project wellnessbox-rnd --source C:\dev\wellnessbox-rnd\artifacts\reports\report.json
+npm run artifact:publish:execute -- --provider naver --project wellnessbox-rnd --source C:\dev\wellnessbox-rnd\artifacts\reports\report.json
 ```
 
-## Dashboard
+보호 규칙:
+
+- 한 번에 한 파일만 업로드
+- 기본 최대 10 MiB
+- private ACL만 사용
+- SHA-256 기반 키로 중복 업로드 방지
+- 텍스트 파일은 키·토큰·private key 패턴을 내용에서도 검사
+- `.env`, OAuth/secret/token 파일, private key, SQLite·n8n DB, `C:\dev` 밖의 파일 차단
+- archive·key-container 파일은 차단하고, PDF·미디어 같은 바이너리는 경로·확장자 규칙만 적용
+- 새 버킷 생성은 `--create-bucket`을 명시한 첫 실행에서만 허용
+
+## NCP 연결 실험
+
+```powershell
+npm run ncp:smoke:execute
+npm run ncp:cost:snapshot:execute
+npm run ncp:object-storage:smoke:execute
+npm run ncp:clova:execute
+```
+
+- Region: 읽기 전용, 0원 예상
+- Billing: 읽기 전용, 0원 예상
+- Object Storage: 임시 버킷·객체를 만들고 검증한 뒤 즉시 삭제
+- CLOVA Studio: 합성 제품 라벨 1건, 출력 120토큰 상한
+
+## KakaoCloud 상태
+
+조직·프로젝트 식별자는 설정돼 있지만 IAM access key와 S3 자격 증명이 없습니다. 키 발급 전에는 VM, Kubernetes, Kubeflow 리소스를 만들지 않습니다.
+
+```powershell
+npm run check:env:kakao
+npm run kakao:token
+```
+
+설정 순서는 `docs/providers/kakao-cloud.md`에 있습니다.
+
+## 대시보드
 
 ```powershell
 npm run dashboard:dev
-npm run dashboard:build
 ```
 
-대시보드는 `apps/dashboard`에 있으며 Vercel 배포를 염두에 둔 Next.js App Router 앱입니다.
-NCP 호출은 브라우저가 아니라 서버 API route에서만 실행됩니다.
-Vercel에 배포할 때는 `DASHBOARD_RUN_TOKEN`을 환경변수로 설정하고, 실행 버튼을 누르는 사용자만 같은 토큰을 입력하세요.
+대시보드에는 크레딧 만료일, 프로젝트별 활용 순위, 예산 상한, 중단 기준, 실제 연결 실험이 함께 표시됩니다. `계획 보기`는 클라우드를 호출하지 않습니다. `실행`은 서버 Route Handler에서만 키를 사용하며 브라우저에는 키를 보내지 않습니다.
 
-## 운영 원칙
+## 폴더
 
-- 실제 키, 토큰, secret은 `.env.local` 또는 로컬 secret store에만 둡니다.
-- 크레딧을 쓰는 실험은 먼저 무료/최소 호출로 API 연결을 확인합니다.
-- 비용 한도와 중단 조건은 [docs/cost-controls.md](docs/cost-controls.md)에 맞춰 정합니다.
-- 실험마다 목적, 사용 서비스, 예상 비용, 결과, 다음 액션을 `experiments/`에 남깁니다.
-- 서비스 비교는 "멋있어 보이는 기능"보다 실제로 재사용 가능한 워크플로우 중심으로 봅니다.
-- 현재 Naver Cloud Platform 크레딧은 약 5,300,000 KRW로 기록합니다.
+```text
+apps/dashboard   Next.js 전략·실험 대시보드
+data/            크레딧 원장과 프로젝트 배분 데이터
+docs/            서비스 조사와 운영 기준
+experiments/     실행 일자별 결과
+scripts/         안전 검사와 provider smoke test
+```
 
-## Next.js를 붙이는 기준
-
-다음 중 2개 이상이 생기면 `apps/dashboard`를 만드는 편이 좋습니다.
-
-- provider별 크레딧 잔액/만료일을 표로 보고 싶다.
-- 실험 결과를 날짜/서비스/비용 기준으로 필터링하고 싶다.
-- 외부 API 호출 결과를 시각화해야 한다.
-- Vercel에 배포해서 모바일에서도 빠르게 확인하고 싶다.
-
-그 전까지는 Markdown + JSON + 작은 스크립트가 더 빠릅니다.
+Reference basis: Toss Home web flow + Tossfeed practical guide prose.

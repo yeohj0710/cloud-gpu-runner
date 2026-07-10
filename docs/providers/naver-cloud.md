@@ -2,7 +2,11 @@
 
 Status: active first provider.
 
-Known credit: about 5,300,000 KRW. Expiration date is not recorded yet.
+Confirmed credits:
+
+- 300,000 KRW, expires 2026-07-31.
+- 5,000,000 KRW, expires 2027-04-30.
+- Greenhouse Track 1 can provide another 5,000,000 KRW after an additional request.
 
 ## Credentials
 
@@ -25,13 +29,16 @@ NCP_OBJECT_STORAGE_ENDPOINT=https://kr.object.ncloudstorage.com
 NCP_OBJECT_STORAGE_REGION=kr-standard
 NCP_OBJECT_STORAGE_ACCESS_KEY_ID=
 NCP_OBJECT_STORAGE_SECRET_KEY=
+NCP_ARTIFACT_BUCKET=
 NCP_CLOVASTUDIO_API_KEY=
 NCP_CLOVASTUDIO_API_GATEWAY_KEY=
+NCP_CLOVASTUDIO_BASE_URL=https://clovastudio.stream.ntruss.com/v1/openai
+NCP_CLOVASTUDIO_MODEL=HCX-DASH-002
 ```
 
 ## First setup checklist
 
-- Confirm credit amount and expiration date.
+- Keep the two issued grants and their expiration dates separate in the ledger.
 - Confirm which services the credit can actually cover.
 - Create access keys with the smallest practical permission scope.
 - Run `npm run check:env:naver` after filling `.env.local`.
@@ -44,7 +51,9 @@ NCP_CLOVASTUDIO_API_GATEWAY_KEY=
 - 2026-05-13: `core.hooksPath` configured to `.githooks` so pre-commit runs the secret scan.
 - 2026-05-13: NCP metadata smoke test succeeded with region codes `KR`, `SGN`, `JPN`.
 - 2026-05-13: Billing snapshot for `202605` succeeded and returned 0 cost rows.
-- 2026-05-13: Object Storage smoke test is blocked by `InvalidAccessKeyId`; likely needs Object Storage-specific S3 credentials.
+- 2026-07-10: Object Storage create/put/get/delete smoke test succeeded and cleaned up the temporary resources.
+- 2026-07-10: A private persistent artifact bucket was created and one content-addressed portfolio JSON was uploaded.
+- 2026-07-10: CLOVA Studio dry-run is implemented; the API key is the remaining blocker for a live call.
 - No actual key values are stored in tracked files.
 
 ## Smoke test

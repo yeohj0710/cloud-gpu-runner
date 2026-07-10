@@ -13,6 +13,9 @@ const providerKeys = [
   "NCP_OBJECT_STORAGE_REGION",
   "NCP_OBJECT_STORAGE_ACCESS_KEY_ID",
   "NCP_OBJECT_STORAGE_SECRET_KEY",
+  "NCP_CLOVASTUDIO_API_KEY",
+  "NCP_CLOVASTUDIO_BASE_URL",
+  "NCP_CLOVASTUDIO_MODEL",
   "DASHBOARD_RUN_TOKEN",
 ] as const;
 
@@ -63,11 +66,17 @@ export function getEnvStatus() {
   const present = Object.fromEntries(
     providerKeys.map((key) => [key, Boolean(env[key])]),
   ) as Record<ProviderKey, boolean>;
-  const deployed = Boolean(process.env.VERCEL);
+  const environment: "vercel" | "production" | "local" = process.env.VERCEL
+    ? "vercel"
+    : process.env.NODE_ENV === "production"
+      ? "production"
+      : "local";
+  const deployed = environment !== "local";
   const runTokenConfigured = Boolean(env.DASHBOARD_RUN_TOKEN);
 
   return {
     deployed,
+    environment,
     runTokenConfigured,
     runTokenRequired: deployed || runTokenConfigured,
     canExecuteWithoutToken: !deployed && !runTokenConfigured,
@@ -84,7 +93,7 @@ export function requireEnv(env: LabEnv, keys: string[]) {
 }
 
 export function assertRunAllowed(request: Request, env: LabEnv) {
-  const deployed = Boolean(process.env.VERCEL);
+  const deployed = Boolean(process.env.VERCEL) || process.env.NODE_ENV === "production";
   const expectedToken = env.DASHBOARD_RUN_TOKEN;
   const required = deployed || Boolean(expectedToken);
 

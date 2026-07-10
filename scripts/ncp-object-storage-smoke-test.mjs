@@ -155,6 +155,23 @@ function summarizeFailure(text) {
   return [code, message].filter(Boolean).join(": ") || text.slice(0, 300);
 }
 
+function printObjectStorageHelp(error) {
+  const message = error instanceof Error ? error.message : String(error);
+
+  console.error(`NCP Object Storage smoke test failed: ${message}`);
+
+  if (message.includes("InvalidAccessKeyId")) {
+    console.error(
+      [
+        "The configured key is not accepted by the Object Storage S3 API.",
+        "Create or copy an API authentication key from the NCP console:",
+        "My Account > Manage account and security > Manage security > Manage access > API authentication key.",
+        "Then set NCP_OBJECT_STORAGE_ACCESS_KEY_ID and NCP_OBJECT_STORAGE_SECRET_KEY to that Access Key ID and Secret Key.",
+      ].join("\n"),
+    );
+  }
+}
+
 async function requireOk(label, request, expectedStatuses) {
   const { response, text } = await request;
 
@@ -173,7 +190,7 @@ console.log(`Endpoint: ${endpoint}`);
 console.log(`Region: ${region}`);
 console.log(
   `Credentials: ${
-    env.NCP_OBJECT_STORAGE_ACCESS_KEY_ID ? "Object Storage specific" : "missing S3-compatible key"
+    env.NCP_OBJECT_STORAGE_ACCESS_KEY_ID ? "S3-compatible key configured" : "missing S3-compatible key"
   }`
 );
 console.log(`Bucket: ${bucketName}`);
@@ -195,6 +212,7 @@ if (!accessKey || !secretKey) {
 
 let bucketCreated = false;
 let objectCreated = false;
+let smokeOk = false;
 
 try {
   await requireOk(
@@ -233,6 +251,10 @@ try {
   }
 
   console.log("Object round trip: OK");
+  smokeOk = true;
+} catch (error) {
+  printObjectStorageHelp(error);
+  process.exitCode = 1;
 } finally {
   if (objectCreated && !keepBucket) {
     try {
@@ -265,4 +287,8 @@ try {
   }
 }
 
-console.log("NCP Object Storage smoke test: OK");
+if (smokeOk) {
+  console.log("NCP Object Storage smoke test: OK");
+} else {
+  process.exit(process.exitCode || 1);
+}

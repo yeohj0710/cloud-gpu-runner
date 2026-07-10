@@ -117,7 +117,7 @@ export function getObjectStoragePlan(env: LabEnv) {
     env.NCP_OBJECT_STORAGE_ACCESS_KEY_ID && env.NCP_OBJECT_STORAGE_SECRET_KEY,
   );
   const credentialsKind = objectStorageReady
-    ? "Object Storage specific"
+    ? "S3-compatible key configured"
     : "missing S3-compatible key";
 
   return {
