@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#ffffff"><title>Work Memory</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="nav"><a class="brand" href="#top"><span>W</span> Work Memory</a><div id="recordingBadge" class="status">확인 중</div></header>
+  <main id="top">
+    <section class="hero">
+      <p class="label">우리 회사의 업무 기억</p>
+      <h1>오늘 한 일을<br>다시 찾을 수 있게</h1>
+      <p class="lead">화면을 감시 점수로 바꾸지 않습니다. 중요한 작업 장면을 검색하고, 업무일지와 장애 재현 자료로 정리합니다.</p>
+      <div class="actions"><button id="syncButton" class="primary">지금 기록 가져오기</button><a class="secondary" href="#search">업무 검색</a></div>
+    </section>
+
+    <section class="metrics" aria-label="오늘 요약">
+      <article><span>오늘 기록</span><strong id="todayFrames">-</strong><small>중복 제거된 장면</small></article>
+      <article><span>업무 세션</span><strong id="todaySessions">-</strong><small>같은 앱의 연속 작업</small></article>
+      <article><span>근무 참고 구간</span><strong id="workWindow">-</strong><small>자동 판정 아닌 참고자료</small></article>
+    </section>
+
+    <section id="search" class="band">
+      <div class="section-head"><p class="label">자연어 업무 검색</p><h2>기억나는 단어 하나면 충분해요</h2><p>앱 이름과 창 제목, 나중에 추가될 OCR·음성 전사 내용을 한 번에 찾습니다.</p></div>
+      <form id="searchForm" class="search"><input id="searchInput" placeholder="예: 배포 오류, 거래처 엑셀, GitHub 이슈" autocomplete="off"><button class="primary">찾기</button></form>
+      <div id="searchResults" class="result-list"><div class="empty">검색어를 입력하거나 최근 기록을 불러오세요.</div></div>
+    </section>
+
+    <section>
+      <div class="section-head"><p class="label">오늘의 업무 흐름</p><h2>어떤 도구에서 무엇을 했는지</h2><p>동일한 앱에서 이어진 장면을 하나의 세션으로 묶었습니다.</p></div>
+      <div id="sessions" class="timeline"><div class="empty">기록을 가져오면 업무 흐름이 나타납니다.</div></div>
+    </section>
+
+    <section class="band">
+      <div class="section-head"><p class="label">GPU 일괄 분석</p><h2>쌓인 화면은 카카오 A100에서 한 번에</h2><p>OCR·화면 의미 검색·민감정보 탐지만 수행하는 작업 명세를 만듭니다. 현재는 과금 없는 dry-run이며 최대 4시간 후 종료됩니다.</p></div>
+      <div class="gpu-card"><div><strong>A100 배치 작업</strong><p id="gpuDetail">최대 5,000장 · 비공개 결과 · VM 자동삭제</p></div><button id="gpuButton" class="primary">작업 명세 만들기</button></div>
+    </section>
+
+    <section>
+      <div class="section-head"><p class="label">기록 통제권</p><h2>작은 회사여도 지켜야 할 기본선</h2></div>
+      <div class="privacy-grid">
+        <article><strong>명시적 동의</strong><p>동의가 기록되지 않으면 매니페스트 수집이 차단됩니다.</p><button id="consentButton" class="secondary">동의 상태 변경</button></article>
+        <article><strong>민감 창 제외</strong><p id="excludedApps">비밀번호 관리자와 인증 창을 기록에서 제외합니다.</p></article>
+        <article><strong>짧은 보존기간</strong><p id="retention">원본은 로컬 정책에 따라 자동 정리합니다.</p></article>
+        <article><strong>열람 흔적</strong><p>검색·상세보기·삭제·GPU 내보내기를 감사 로그에 남깁니다.</p></article>
+      </div>
+    </section>
+  </main>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="/app.js" defer></script>
+</body>
+</html>
+

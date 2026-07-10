@@ -1,0 +1,12 @@
+[project]
+name = "work-memory"
+version = "0.1.0"
+description = "Local-first work capture search, timeline and GPU batch control"
+requires-python = ">=3.11"
+
+[project.scripts]
+work-memory = "work_memory.cli:main"
+
+[tool.unittest]
+start-directory = "tests"
+
