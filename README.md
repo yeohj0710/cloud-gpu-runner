@@ -1,8 +1,15 @@
 # Work Memory
 
-Protected Vercel preview: https://work-memory-em2bbu3wu-yeohj0710s-projects.vercel.app
+Protected Vercel production: https://work-memory-ten.vercel.app
 
 접속 비밀번호는 코드나 GitHub에 저장하지 않고 Vercel의 암호화된 `APP_PASSWORD` 환경변수로 관리합니다. 인증 성공 시 12시간 유효한 HttpOnly 세션 쿠키를 발급하며, 로그아웃하면 즉시 폐기합니다.
+
+로그인 후 `연결` 영역에서 실제 KakaoCloud OpenAPI 기능을 사용할 수 있습니다.
+
+- IAM 인증 및 프로젝트/리전 검증
+- 현재 BCS 인스턴스 목록 조회
+- 사용 가능한 GPU 인스턴스 사양 조회
+- 생성·삭제·과금 작업은 예산 상한과 추가 승인 구현 전까지 차단
 
 > Vercel 배포판은 민감정보가 없는 브라우저 크레딧 원장입니다. 실제 화면 기록, 클라우드 키, 공급자 API 호출과 GPU 실행은 로컬 에이전트 `http://127.0.0.1:8765`에서만 처리합니다.
 
