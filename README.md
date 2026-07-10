@@ -50,6 +50,8 @@ python -m work_memory search "배포 오류"
 python -m work_memory gpu-job --limit 1000
 python -m work_memory billing
 python -m work_memory add-usage naver "Object Storage" 1200 --kind actual
+python -m work_memory kakao-status
+python -m work_memory kakao-token-test
 python -m work_memory serve
 ```
 

@@ -11,6 +11,7 @@ from .gpu import create_job, validate_job
 from .ingest import ingest_manifest
 from .server import serve
 from .billing import add_usage, overview as billing_overview
+from .kakao import connection_status, issue_token
 
 
 def context(config_path: Path):
@@ -44,6 +45,8 @@ def main(argv: list[str] | None = None) -> int:
     usage.add_argument("amount_krw", type=int)
     usage.add_argument("--kind", choices=["actual", "estimated", "adjustment"], default="actual")
     usage.add_argument("--note", default="")
+    sub.add_parser("kakao-status")
+    sub.add_parser("kakao-token-test")
     args = parser.parse_args(argv)
     config_path = Path(args.config).resolve()
     root, config, db = context(config_path)
@@ -65,6 +68,12 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(billing_overview(db), ensure_ascii=False, indent=2))
     elif args.command == "add-usage":
         print(json.dumps({"id": add_usage(db, args.provider, args.service, args.amount_krw, args.kind, args.note)}, ensure_ascii=False))
+    elif args.command == "kakao-status":
+        print(json.dumps(connection_status(root), ensure_ascii=False))
+    elif args.command == "kakao-token-test":
+        result = issue_token(root)
+        result.pop("token", None)
+        print(json.dumps(result, ensure_ascii=False))
     elif args.command == "serve":
         if not args.no_browser:
             webbrowser.open(f'http://{config["host"]}:{config["port"]}')

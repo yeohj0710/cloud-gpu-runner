@@ -12,6 +12,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 from .db import Database
 from .billing import add_usage, overview as billing_overview
 from .gpu import create_job
+from .kakao import connection_status, issue_token
 from .ingest import ingest_manifest
 
 
@@ -61,6 +62,12 @@ class WorkMemoryHandler(BaseHTTPRequestHandler):
             return self._overview()
         if parsed.path == "/api/billing":
             return self._json(billing_overview(self.server.db))
+        if parsed.path == "/api/cloud/kakao/status":
+            status = connection_status(self.server.root)
+            if status["configured"]:
+                token_result = issue_token(self.server.root)
+                status.update({"verified": True, "expires_at": token_result["expires_at"], "project": token_result["project"]})
+            return self._json(status)
         if parsed.path == "/api/search":
             query = parse_qs(parsed.query).get("q", [""])[0]
             self.server.db.audit("local-user", "search", query)
