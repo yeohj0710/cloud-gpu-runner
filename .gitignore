@@ -8,3 +8,5 @@ __pycache__/
 gpu/jobs/
 .playwright-cli/
 output/
+
+.vercel
