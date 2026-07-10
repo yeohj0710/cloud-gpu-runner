@@ -1,5 +1,9 @@
 # Work Memory
 
+Vercel preview: https://work-memory-34snni4i3-yeohj0710s-projects.vercel.app
+
+> Vercel 배포판은 민감정보가 없는 브라우저 크레딧 원장입니다. 실제 화면 기록, 클라우드 키, 공급자 API 호출과 GPU 실행은 로컬 에이전트 `http://127.0.0.1:8765`에서만 처리합니다.
+
 직원 화면 기록을 **감시 점수**가 아니라 검색 가능한 업무 기억, 업무일지, 장애 재현 자료로 바꾸는 로컬 우선 사내 도구입니다.
 
 현재 완성된 범위:
