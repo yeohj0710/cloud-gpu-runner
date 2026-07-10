@@ -30,7 +30,8 @@ def main(argv: list[str] | None = None) -> int:
     consent = sub.add_parser("consent")
     consent.add_argument("value", choices=["agree", "revoke"])
     sub.add_parser("ingest")
-    sub.add_parser("serve")
+    serve_parser = sub.add_parser("serve")
+    serve_parser.add_argument("--no-browser", action="store_true")
     search = sub.add_parser("search")
     search.add_argument("query", nargs="?", default="")
     gpu = sub.add_parser("gpu-job")
@@ -65,7 +66,8 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "add-usage":
         print(json.dumps({"id": add_usage(db, args.provider, args.service, args.amount_krw, args.kind, args.note)}, ensure_ascii=False))
     elif args.command == "serve":
-        webbrowser.open(f'http://{config["host"]}:{config["port"]}')
+        if not args.no_browser:
+            webbrowser.open(f'http://{config["host"]}:{config["port"]}')
         serve(db, config, root)
     return 0
 

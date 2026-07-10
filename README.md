@@ -34,6 +34,12 @@ cd C:\dev\work-memory
 
 브라우저에서 `http://127.0.0.1:8765`가 열립니다. 처음에는 화면 아래의 `수집에 동의`를 누른 후 `지금 기록 가져오기`를 누릅니다.
 
+Windows 로그인 시 자동으로 백그라운드 실행되게 설치:
+
+```powershell
+.\Install-WorkMemory.ps1
+```
+
 ## CLI
 
 ```powershell
