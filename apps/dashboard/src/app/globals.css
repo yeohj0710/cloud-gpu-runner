@@ -384,6 +384,115 @@ p {
   color: #8b95a1;
 }
 
+.principle-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.principle-card {
+  min-height: 320px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 30px;
+  background: var(--panel);
+}
+
+.principle-card-pass {
+  border-color: #c8ead8;
+  background: var(--green-soft);
+}
+
+.principle-card-blocked {
+  border-color: #ffd1d2;
+  background: var(--red-soft);
+}
+
+.principle-card h3 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--foreground);
+  font-size: 20px;
+}
+
+.principle-card ul,
+.unlock-list {
+  display: grid;
+  gap: 12px;
+  margin: 22px 0 0;
+  padding-left: 20px;
+  color: var(--strong);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.cloud-proof {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  margin-top: 16px;
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: var(--green-soft);
+  color: var(--strong);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.cloud-proof svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--green);
+}
+
+.unlock-list {
+  gap: 5px;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.rejected-list {
+  border-top: 1px solid var(--line);
+}
+
+.rejected-row {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) minmax(240px, 0.55fr);
+  gap: 18px;
+  align-items: start;
+  border-bottom: 1px solid var(--line);
+  padding: 28px 0;
+}
+
+.rejected-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.rejected-row h3 {
+  color: var(--foreground);
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+.rejected-row p,
+.rejected-row small {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.rejected-row p {
+  margin-top: 5px;
+}
+
 .decision-section {
   padding-bottom: 124px;
 }
@@ -698,14 +807,16 @@ p {
 }
 
 .badge-ok,
-.readiness-next {
+.readiness-next,
+.readiness-active {
   border-color: #bcebd3;
   background: var(--green-soft);
   color: var(--green);
 }
 
 .badge-warn,
-.readiness-later {
+.readiness-setup-needed,
+.readiness-approval-needed {
   border-color: #f2d39b;
   background: var(--amber-soft);
   color: var(--amber);
@@ -713,7 +824,7 @@ p {
 
 .badge-blocked,
 .badge-danger,
-.readiness-blocked {
+.readiness-parked {
   border-color: #ffc6c8;
   background: var(--red-soft);
   color: var(--red);
@@ -927,6 +1038,10 @@ p {
     grid-template-columns: 1fr 1fr;
   }
 
+  .principle-grid {
+    grid-template-columns: 1fr;
+  }
+
   .credit-card:last-child {
     grid-column: 1 / -1;
   }
@@ -1014,6 +1129,7 @@ p {
   }
 
   .credit-grid,
+  .principle-grid,
   .decision-grid,
   .status-grid,
   .experiments {
@@ -1042,6 +1158,14 @@ p {
 
   .opportunity-main,
   .opportunity-meta {
+    grid-column: 2;
+  }
+
+  .rejected-row {
+    grid-template-columns: 38px minmax(0, 1fr);
+  }
+
+  .rejected-row > small {
     grid-column: 2;
   }
 

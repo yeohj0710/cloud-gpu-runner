@@ -80,9 +80,15 @@ async function verifyInBrowser() {
     await page.goto(baseUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
     console.log("Dashboard document loaded.");
     await page.locator("h1").first().waitFor();
-    await page.getByRole("heading", { name: "남은 크레딧, 먼저 쓸 곳이 정해졌어요" }).waitFor();
+    await page.getByRole("heading", { name: "GPT가 못 하는 일에만 크레딧을 써요" }).waitFor();
     await page.getByRole("heading", { name: /15,300,000원/ }).waitFor();
-    await page.getByText("nutrition-safety-engine", { exact: true }).first().waitFor();
+    await page.getByText("insane-search-testbed", { exact: true }).first().waitFor();
+    await page.getByText("CLOVA OCR·Studio로 라벨과 문서 추출", { exact: true }).waitFor();
+
+    const healthResponse = await page.request.head(`${baseUrl}/api/health`);
+    if (healthResponse.status() !== 200) {
+      throw new Error(`Health endpoint returned ${healthResponse.status()}, expected 200.`);
+    }
 
     if (!executeLive) {
       const blockedResponse = await page.request.post(`${baseUrl}/api/ncp/region-smoke`, {
@@ -107,7 +113,6 @@ async function verifyInBrowser() {
     await runDryRun(page, 0, "NCP region smoke test");
     await runDryRun(page, 1, "NCP cost snapshot");
     await runDryRun(page, 2, "NCP Object Storage smoke test");
-    await runDryRun(page, 3, "NCP CLOVA Studio smoke test");
 
     if (executeLive) {
       console.log("DASHBOARD_VERIFY_EXECUTE=1 set; checking the region execute button...");

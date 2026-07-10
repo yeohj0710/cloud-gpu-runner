@@ -1,16 +1,31 @@
 # Cloud Credit Lab
 
-네이버·카카오 클라우드 크레딧을 실제 프로젝트 성과로 바꾸기 위한 실험 저장소입니다. 모든 유료 호출은 기본값이 dry-run이고, 비용 상한과 중단 기준이 있는 작업만 실행합니다.
+네이버·카카오 크레딧을 **GPT가 대신할 수 없는 클라우드 능력**에만 쓰기 위한 실험 저장소입니다.
 
-## 지금 가진 크레딧
+기준은 단순합니다.
 
-| 구분 | 확인된 발급액 | 만료일 | 지금 할 일 |
+> GPT가 답을 만들 수 있는 일은 탈락. 개인 PC가 꺼져도 계속 실행되거나, 외부 저장소에서 복구되거나, 통신사·CDN·다중 리전처럼 실제 전달망이 필요한 일만 통과.
+
+## 크레딧과 현재 결정
+
+| 구분 | 확정 발급액 | 만료일 | 현재 결정 |
 | --- | ---: | --- | --- |
-| NCP 신규 크레딧 | 300,000원 | 2026-07-31 | OCR·HyperCLOVA X 평가에 먼저 사용 |
-| NCP Greenhouse | 5,000,000원 | 2027-04-30 | 공용 문서 처리·스토리지·배치 작업 |
-| KakaoCloud Boost | 10,000,000원 | 2027-05-31 | IAM 키 발급 후 R&D GPU 실험 |
+| NCP 신규 크레딧 | 300,000원 | 2026-07-31 | 클라우드 전용 파일럿 최대 230,000원 |
+| NCP Greenhouse | 5,000,000원 | 2027-04-30 | 7월 파일럿이 가치를 증명할 때까지 전액 보류 |
+| KakaoCloud Boost | 10,000,000원 | 2027-05-31 | 실제 규모 병목이 생길 때까지 전액 보류 |
 
-카카오 Boost 선정 메일의 20,000,000원과 실제 발급 메일의 10,000,000원은 중복 합산하지 않습니다. 현재 확인된 발급액은 총 15,300,000원입니다. 자세한 근거와 배분안은 `apps/dashboard/src/data/credit-portfolio.json`과 `docs/credit-ledger.md`에 있습니다.
+확정 발급액은 총 15,300,000원입니다. 현재 승인한 최대 지출은 230,000원이고, 15,070,000원은 `parked` 상태입니다.
+
+카카오 Boost의 20,000,000원 선정 메일과 10,000,000원 발급 메일은 중복 합산하지 않습니다.
+
+## 지금 통과한 4개
+
+1. NCP Cloud Functions를 한국·싱가포르·일본에 배포해 공개 서비스 상태를 외부에서 계속 확인
+2. Object Storage 객체를 실제로 다시 내려받아 SHA-256이 같은지 확인하는 복구 훈련
+3. `window-back-recorder`의 비민감 샘플을 VOD Station에서 SD·HD·썸네일·HLS로 변환
+4. 사용자 승인 후 SENS 테스트 번호로 장애 문자 전달과 수신 결과 확인
+
+OCR, 요약, 전사, 범용 LLM 호출은 크레딧 계획에서 제거했습니다. `wellnessbox-rnd` GPU도 현재 병목이 컴퓨팅이 아니라 데이터·평가 근거이고 training gate가 `NO-GO`라 보류했습니다.
 
 ## 빠른 시작
 
@@ -18,71 +33,57 @@
 cd C:\dev\cloud-credit-lab
 npm --prefix apps/dashboard install
 Copy-Item .env.example .env.local
-notepad .env.local
 npm run check:env:naver
 npm test
 ```
 
-실제 키는 `.env.local`에만 둡니다. 이 파일은 Git에서 제외됩니다.
+실제 키는 `.env.local`에만 둡니다.
 
-## 자주 쓰는 명령
+## 클라우드 전용 판정과 다중 리전 계획
 
 ```powershell
-npm run check:safety
-npm run ncp:smoke
-npm run ncp:cost:snapshot
-npm run ncp:object-storage:smoke
-npm run ncp:clova
-npm run dashboard:dev
-npm test
+npm run unit:test
+npm run probe:plan
 ```
 
-`:execute`가 없는 명령은 요청 계획만 보여줍니다.
+`probe:plan`은 네트워크를 호출하지 않습니다. `cloud-functions/multi-region-probe`에 있는 NAVER Cloud Functions Action을 KR·SGN·JPN에 배포할 계획만 검증합니다.
 
-## 공용 아티팩트 보관
+Action은 응답 본문과 URL을 결과에 저장하지 않습니다. 대상 ID, 리전, HTTP 상태, 지연시간, 시각만 반환합니다. 대상 URL은 배포 패키지의 `targets.json`에 고정되며 실행 요청으로 덮어쓸 수 없습니다.
 
-`C:\dev` 아래의 평가 보고서나 생성 결과 한 파일을 NCP/KakaoCloud S3 호환 스토리지에 올릴 수 있습니다.
+## private 아티팩트 업로드와 복구 검증
 
 ```powershell
 npm run artifact:publish -- --provider naver --project wellnessbox-rnd --source C:\dev\wellnessbox-rnd\artifacts\reports\report.json
 npm run artifact:publish:execute -- --provider naver --project wellnessbox-rnd --source C:\dev\wellnessbox-rnd\artifacts\reports\report.json
+
+npm run artifact:verify -- --provider naver --object <object-key> --sha256 <digest>
+npm run artifact:verify:execute -- --provider naver --object <object-key> --sha256 <digest>
 ```
 
 보호 규칙:
 
-- 한 번에 한 파일만 업로드
+- 기본값은 dry-run
+- 한 번에 명시한 파일 하나만 업로드
 - 기본 최대 10 MiB
-- private ACL만 사용
-- SHA-256 기반 키로 중복 업로드 방지
-- 텍스트 파일은 키·토큰·private key 패턴을 내용에서도 검사
-- `.env`, OAuth/secret/token 파일, private key, SQLite·n8n DB, `C:\dev` 밖의 파일 차단
-- archive·key-container 파일은 차단하고, PDF·미디어 같은 바이너리는 경로·확장자 규칙만 적용
-- 새 버킷 생성은 `--create-bucket`을 명시한 첫 실행에서만 허용
+- private 객체만 사용
+- SHA-256 기반 중복 방지와 복구 검증
+- `.env`, 키, 토큰, private key, SQLite·n8n DB, `C:\dev` 밖 파일 차단
+- 텍스트 내용에서도 시크릿 패턴 검사
+- 복구 파일은 디스크에 쓰지 않고 메모리에서 해시 비교
 
-## NCP 연결 실험
+## NCP 인프라 확인
 
 ```powershell
+npm run ncp:smoke
+npm run ncp:cost:snapshot
+npm run ncp:object-storage:smoke
+
 npm run ncp:smoke:execute
 npm run ncp:cost:snapshot:execute
 npm run ncp:object-storage:smoke:execute
-npm run ncp:clova:execute
 ```
 
-- Region: 읽기 전용, 0원 예상
-- Billing: 읽기 전용, 0원 예상
-- Object Storage: 임시 버킷·객체를 만들고 검증한 뒤 즉시 삭제
-- CLOVA Studio: 합성 제품 라벨 1건, 출력 120토큰 상한
-
-## KakaoCloud 상태
-
-조직·프로젝트 식별자는 설정돼 있지만 IAM access key와 S3 자격 증명이 없습니다. 키 발급 전에는 VM, Kubernetes, Kubeflow 리소스를 만들지 않습니다.
-
-```powershell
-npm run check:env:kakao
-npm run kakao:token
-```
-
-설정 순서는 `docs/providers/kakao-cloud.md`에 있습니다.
+`:execute`가 없는 명령은 요청 계획만 보여줍니다. 배포 환경에서는 `DASHBOARD_RUN_TOKEN`이 없으면 실제 실행이 차단됩니다.
 
 ## 대시보드
 
@@ -90,16 +91,25 @@ npm run kakao:token
 npm run dashboard:dev
 ```
 
-대시보드에는 크레딧 만료일, 프로젝트별 활용 순위, 예산 상한, 중단 기준, 실제 연결 실험이 함께 표시됩니다. `계획 보기`는 클라우드를 호출하지 않습니다. `실행`은 서버 Route Handler에서만 키를 사용하며 브라우저에는 키를 보내지 않습니다.
+대시보드는 다음을 보여줍니다.
 
-## 폴더
+- 확정 크레딧과 실제 승인 지출
+- 보류한 예산
+- GPT 대체 불가 판정 근거
+- 프로젝트별 클라우드 전용 활용안
+- 해제 조건과 중단 기준
+- 탈락시킨 기존 아이디어
+- Region·Billing·Object Storage 연결 실험
+
+## 구조
 
 ```text
-apps/dashboard   Next.js 전략·실험 대시보드
-data/            크레딧 원장과 프로젝트 배분 데이터
-docs/            서비스 조사와 운영 기준
-experiments/     실행 일자별 결과
-scripts/         안전 검사와 provider smoke test
+apps/dashboard                         전략·실험 대시보드
+cloud-functions/multi-region-probe    KR·SGN·JPN 배포용 Action
+data/                                  비밀값 없는 실행 계획 예시
+docs/                                  결정 근거와 운영 기준
+experiments/                           실제 실행 결과
+scripts/                               검증·업로드·복구·비용 도구
 ```
 
-Reference basis: Toss Home web flow + Tossfeed practical guide prose.
+UI reference: Toss Home web flow. Service facts: NAVER Cloud and KakaoCloud official documentation.

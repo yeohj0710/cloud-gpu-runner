@@ -1,52 +1,67 @@
 # Architecture
 
-## Purpose
+## Decision boundary
 
-This repo tracks cloud credits, available APIs, experiment ideas, and concrete results.
-It is intentionally lightweight until the service direction is clearer.
+The repository is an evidence gate, not a catalog of things cloud vendors sell.
 
-The most likely first use is research/TIPS work under:
+An active opportunity must include all of these:
 
-```text
-C:\Users\hjyeo\Desktop\웰박\10 TIPS
-```
+1. `gptSubstitute: false`
+2. a concrete `cloudExclusiveCapability`
+3. measurable `unlockConditions`
+4. a `budgetCapKrw`
+5. a `stopRule`
 
-The same patterns should also stay reusable for company-internal features such as
-document processing, file storage, batch jobs, admin tooling, and AI-assisted
-summarization or extraction.
+`scripts/lib/cloud-native-gate.mjs` validates those constraints and keeps committed plus parked budgets equal to confirmed grants.
 
 ## Layers
 
-1. Provider inventory
-   - Credit amount
-   - Expiration date
-   - Available services
-   - Required credentials
+1. **Portfolio SSOT**
+   - `apps/dashboard/src/data/credit-portfolio.json`
+   - issued grants, expiration, committed cap, parked amount, opportunities, rejected ideas
 
-2. Experiment records
-   - Goal
-   - Provider/service used
-   - Expected credit usage
-   - Minimal verification method
-   - Result and next action
+2. **Cloud execution packages**
+   - `cloud-functions/multi-region-probe`: dependency-free NAVER Action for KR/SGN/JPN
+   - targets are bound in the deployment package and cannot be overridden by runtime parameters
+   - output excludes response bodies and endpoint URLs
 
-3. Dashboard
-   - `apps/dashboard`
-   - Next.js App Router with server-side API routes for provider calls
-   - Browser UI never receives provider secrets
-   - Execute actions can be protected with `DASHBOARD_RUN_TOKEN` on Vercel
+3. **Offsite durability tools**
+   - `scripts/cloud-artifact-publish.mjs`: private, content-addressed upload
+   - `scripts/cloud-artifact-verify.mjs`: private GET and in-memory SHA-256 restore proof
 
-## Suggested first experiments
+4. **Provider safety surface**
+   - metadata, billing, and temporary Object Storage smoke tests
+   - dry-run by default
+   - deployed execute requests protected by `DASHBOARD_RUN_TOKEN`
 
-- NCP Object Storage: store generated TIPS/research artifacts, PDFs, images, or audio output.
-- NCP CLOVA Studio: test summarization, extraction, or classification workflows for research documents.
-- NCP OCR / document AI: compare against local PDF/OCR workflows for TIPS/R&D files if credits allow.
-- CDN/static hosting: serve generated assets cheaply.
-- Batch compute/functions: run repeatable document jobs without tying them to a local machine.
-- Kakao Cloud later: compare object storage, VM, database, and AI-related options.
+5. **Dashboard**
+   - Next.js Server Component loads the validated portfolio
+   - Client Component contains only interactive provider smoke tests
+   - provider credentials never enter browser props
+
+## Active data flow
+
+```text
+public HTTPS health endpoints
+  -> Cloud Functions in KR / SGN / JPN
+  -> status + latency + region only
+  -> later: private Object Storage history
+  -> later and approved: SENS outage alert
+
+selected non-sensitive artifact
+  -> local secret/path/size scan
+  -> private content-addressed Object Storage upload
+  -> signed GET restore
+  -> SHA-256 equality proof
+```
+
+## Parked architecture
+
+KakaoCloud Advanced Managed Search, GPU, Kubeflow, and second-provider storage are intentionally absent from runtime. They unlock only after the portfolio's measured thresholds are met.
 
 ## Decision log
 
-- 2026-05-12: Started without Next.js. Dashboard is deferred until experiment data exists.
-- 2026-05-12: Marked research/TIPS work as the highest-probability use case and recorded NCP credit at about 5,300,000 KRW.
-- 2026-05-13: Added `apps/dashboard` as a safe experiment console after NCP auth and billing snapshot checks were working.
+- 2026-05-13: dashboard added after NCP auth and billing checks.
+- 2026-07-10: shared private artifact publisher validated against NCP Object Storage.
+- 2026-07-10: generic AI plan rejected; OCR, summarization, transcription, and premature GPU/search work removed.
+- 2026-07-10: schema v2 introduced with a hard GPT-substitutability gate and parked-budget accounting.

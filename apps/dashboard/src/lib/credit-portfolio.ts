@@ -17,7 +17,7 @@ export type PortfolioProvider = {
   potentialAdditionalKrw?: number;
   programAwardedKrw?: number;
   potentialUnissuedKrw?: number;
-  status: "ready" | "credentials-blocked";
+  status: "infrastructure-ready" | "parked-credentials-blocked";
   grants: Grant[];
   nextUnlock: string;
   blockers: string[];
@@ -28,7 +28,9 @@ export type Allocation = {
   providerId: string;
   grantId: string;
   title: string;
-  totalCapKrw: number;
+  availableKrw: number;
+  committedCapKrw: number;
+  parkedKrw: number;
   items: Array<{ label: string; capKrw: number }>;
 };
 
@@ -36,24 +38,34 @@ export type Opportunity = {
   priority: number;
   projects: string[];
   providerId: string;
+  grantId: string;
   services: string[];
   title: string;
+  cloudExclusiveCapability: string;
+  gptSubstitute: false;
   why: string;
   pilot: string;
   budgetCapKrw: number;
-  readiness: "next" | "blocked" | "later";
+  readiness: "next" | "active" | "setup-needed" | "approval-needed" | "parked";
+  unlockConditions: string[];
   stopRule: string;
 };
 
 export type CreditPortfolio = {
-  schemaVersion: number;
+  schemaVersion: 2;
   asOf: string;
   confirmedIssuedKrw: number;
+  selectionRule: {
+    name: string;
+    question: string;
+    approveOnlyIf: string[];
+    rejectIf: string[];
+  };
   providers: PortfolioProvider[];
   allocations: Allocation[];
   opportunities: Opportunity[];
+  rejectedIdeas: Array<{ idea: string; reason: string; replacement: string }>;
   completedChecks: string[];
-  doNotSpendOn: string[];
   officialReferences: string[];
 };
 
@@ -63,6 +75,10 @@ export type PortfolioView = Omit<CreditPortfolio, "providers"> & {
       grants: Array<Grant & { daysRemaining: number; expired: boolean }>;
     }
   >;
+  budgetSummary: {
+    committedCapKrw: number;
+    parkedKrw: number;
+  };
 };
 
 function utcDay(value: string) {
@@ -75,15 +91,27 @@ function validatePortfolio(portfolio: CreditPortfolio) {
     0,
   );
 
-  if (issuedTotal !== portfolio.confirmedIssuedKrw) {
-    throw new Error(`Credit total mismatch: ${issuedTotal} != ${portfolio.confirmedIssuedKrw}`);
+  if (portfolio.schemaVersion !== 2 || issuedTotal !== portfolio.confirmedIssuedKrw) {
+    throw new Error("Cloud-native portfolio credit total mismatch.");
   }
 
   for (const allocation of portfolio.allocations) {
     const itemTotal = allocation.items.reduce((total, item) => total + item.capKrw, 0);
+    if (
+      itemTotal !== allocation.committedCapKrw ||
+      allocation.committedCapKrw + allocation.parkedKrw !== allocation.availableKrw
+    ) {
+      throw new Error(`Allocation balance mismatch for ${allocation.id}.`);
+    }
+  }
 
-    if (itemTotal !== allocation.totalCapKrw) {
-      throw new Error(`Allocation total mismatch for ${allocation.id}`);
+  for (const opportunity of portfolio.opportunities) {
+    if (
+      opportunity.gptSubstitute !== false ||
+      !opportunity.cloudExclusiveCapability ||
+      !opportunity.stopRule
+    ) {
+      throw new Error(`Non-cloud-native opportunity detected: ${opportunity.title}.`);
     }
   }
 }
@@ -101,9 +129,17 @@ export function loadCreditPortfolio(now = new Date()): PortfolioView {
     seoulNow.getUTCMonth(),
     seoulNow.getUTCDate(),
   );
+  const budgetSummary = portfolio.allocations.reduce(
+    (summary, allocation) => ({
+      committedCapKrw: summary.committedCapKrw + allocation.committedCapKrw,
+      parkedKrw: summary.parkedKrw + allocation.parkedKrw,
+    }),
+    { committedCapKrw: 0, parkedKrw: 0 },
+  );
 
   return {
     ...portfolio,
+    budgetSummary,
     providers: portfolio.providers.map((provider) => ({
       ...provider,
       grants: provider.grants.map((grant) => {

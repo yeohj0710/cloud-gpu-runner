@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "schedule": "*/15 * * * *",
+  "timeoutMs": 5000,
+  "regions": ["KR", "SGN", "JPN"],
+  "targets": [
+    {
+      "id": "dashboard",
+      "url": "https://replace-with-public-health-endpoint.example/health",
+      "expectedStatus": 200
+    }
+  ],
+  "privacy": {
+    "storeResponseBody": false,
+    "storeUrlInResult": false,
+    "allowedData": ["target id", "region", "HTTP status", "latency", "timestamp"]
+  }
+}

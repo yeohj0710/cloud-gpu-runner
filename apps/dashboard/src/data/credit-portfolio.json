@@ -1,14 +1,30 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "asOf": "2026-07-10",
   "confirmedIssuedKrw": 15300000,
+  "selectionRule": {
+    "name": "GPT 대체 불가 우선",
+    "question": "이 결과를 GPT API와 현재 PC만으로 지속적으로 제공할 수 있는가?",
+    "approveOnlyIf": [
+      "서로 다른 클라우드 리전에서 24시간 외부 실행이 필요함",
+      "PC 고장과 분리된 외부 저장·복구가 필요함",
+      "통신사 문자나 관리형 CDN처럼 외부 전달망이 필요함",
+      "로컬 한 대로 감당하기 어려운 검증된 대규모 부하가 실제로 존재함"
+    ],
+    "rejectIf": [
+      "OCR·요약·추출·일반 질의처럼 범용 GPT로 대체 가능함",
+      "기존 Vercel·GitHub·YouTube가 이미 같은 역할을 더 단순하게 제공함",
+      "현재 병목이 데이터·평가·승인인데 컴퓨팅부터 늘리려 함",
+      "무료 크레딧을 소진하는 것 자체가 목적임"
+    ]
+  },
   "providers": [
     {
       "id": "naver-cloud-platform",
       "displayName": "네이버클라우드",
       "confirmedIssuedKrw": 5300000,
       "potentialAdditionalKrw": 5000000,
-      "status": "ready",
+      "status": "infrastructure-ready",
       "grants": [
         {
           "id": "ncp-new-customer-plus",
@@ -29,10 +45,11 @@
           "evidence": "2026-05-04 크레딧 부여 메일"
         }
       ],
-      "nextUnlock": "Track 1 사용 근거와 계획을 정리해 추가 5,000,000원 신청",
+      "nextUnlock": "7월 인프라 파일럿의 가동률·복구시간·미디어 변환 결과로 추가 5,000,000원 신청",
       "blockers": [
-        "CLOVA Studio API 키 미발급",
-        "CLOVA OCR/Speech 도메인 미생성"
+        "Cloud Functions 리전별 Action·Cron Trigger 미생성",
+        "SENS 발신 번호·수신 동의 미등록",
+        "VOD Station 채널은 파일럿 직전에만 생성하고 종료해야 함"
       ]
     },
     {
@@ -41,7 +58,7 @@
       "confirmedIssuedKrw": 10000000,
       "programAwardedKrw": 20000000,
       "potentialUnissuedKrw": 10000000,
-      "status": "credentials-blocked",
+      "status": "parked-credentials-blocked",
       "grants": [
         {
           "id": "kakao-rocket-launcher-issued",
@@ -53,233 +70,247 @@
           "evidence": "2026-05-28 무료 크레딧 발급 메일"
         }
       ],
-      "nextUnlock": "Boost 20,000,000원 선정액 중 미발급 10,000,000원 지급 조건 확인",
+      "nextUnlock": "실제 대규모 검색·GPU·이중화 병목이 생긴 뒤 첫 bounded pilot만 승인",
       "blockers": [
         "IAM access key ID/secret 미발급",
-        "S3 자격 증명 미발급"
+        "S3 자격 증명 미발급",
+        "현재 C:\\dev에는 상시 클러스터를 정당화할 부하가 없음"
       ]
     }
   ],
   "allocations": [
     {
-      "id": "ncp-urgent-202607",
+      "id": "ncp-urgent-cloud-only",
       "providerId": "naver-cloud-platform",
       "grantId": "ncp-new-customer-plus",
-      "title": "7월 안에 결과가 남는 AI 실험",
-      "totalCapKrw": 300000,
+      "title": "7월 안에 클라우드에서만 가능한 것 검증",
+      "availableKrw": 300000,
+      "committedCapKrw": 230000,
+      "parkedKrw": 70000,
       "items": [
-        {
-          "label": "제품 라벨·연구 문서 OCR 평가",
-          "capKrw": 120000
-        },
-        {
-          "label": "HyperCLOVA X 추출·요약 평가",
-          "capKrw": 100000
-        },
-        {
-          "label": "녹화물 Speech 전사 평가",
-          "capKrw": 30000
-        },
-        {
-          "label": "Object Storage·Functions 연결",
-          "capKrw": 20000
-        },
-        {
-          "label": "오류 재시도·예비비",
-          "capKrw": 30000
-        }
+        { "label": "KR·SGN·JPN 외부 가동률 프로브", "capKrw": 80000 },
+        { "label": "Object Storage 복구 무결성 훈련", "capKrw": 50000 },
+        { "label": "VOD Station 변환·썸네일·HLS 파일럿", "capKrw": 70000 },
+        { "label": "SENS 장애 문자 전달 파일럿", "capKrw": 30000 }
       ]
     },
     {
-      "id": "ncp-greenhouse-year",
+      "id": "ncp-greenhouse-parked",
       "providerId": "naver-cloud-platform",
       "grantId": "ncp-greenhouse-track-1",
-      "title": "공용 문서·근거 처리 기반",
-      "totalCapKrw": 5000000,
-      "items": [
-        {
-          "label": "OCR·HyperCLOVA 근거 추출",
-          "capKrw": 1500000
-        },
-        {
-          "label": "공용 Object Storage·배치 작업",
-          "capKrw": 750000
-        },
-        {
-          "label": "검색·임베딩 비교",
-          "capKrw": 750000
-        },
-        {
-          "label": "Functions·단기 컴퓨트",
-          "capKrw": 500000
-        },
-        {
-          "label": "프로젝트별 PoC",
-          "capKrw": 1000000
-        },
-        {
-          "label": "예비비",
-          "capKrw": 500000
-        }
-      ]
+      "title": "7월 파일럿이 효과를 증명할 때까지 보류",
+      "availableKrw": 5000000,
+      "committedCapKrw": 0,
+      "parkedKrw": 5000000,
+      "items": []
     },
     {
-      "id": "kakao-boost-issued",
+      "id": "kakao-boost-parked",
       "providerId": "kakao-cloud",
       "grantId": "kakao-rocket-launcher-issued",
-      "title": "로컬에서 오래 걸리는 R&D 계산 이전",
-      "totalCapKrw": 10000000,
-      "items": [
-        {
-          "label": "GPU 단기 학습·replay·평가",
-          "capKrw": 4000000
-        },
-        {
-          "label": "Kubeflow 1회 bounded workflow",
-          "capKrw": 2000000
-        },
-        {
-          "label": "Object Storage·벡터 검색",
-          "capKrw": 1500000
-        },
-        {
-          "label": "모델 serving 부하 비교",
-          "capKrw": 1500000
-        },
-        {
-          "label": "예비비",
-          "capKrw": 1000000
-        }
-      ]
+      "title": "실제 규모 병목이 생길 때까지 전액 보류",
+      "availableKrw": 10000000,
+      "committedCapKrw": 0,
+      "parkedKrw": 10000000,
+      "items": []
     }
   ],
   "opportunities": [
     {
       "priority": 1,
       "projects": [
-        "nutrition-safety-engine",
-        "otc-nutrient-safety-engine"
+        "cloud-credit-lab",
+        "attendance",
+        "wellnessbox",
+        "pharmassist-realtime-copilot",
+        "insane-search-testbed"
       ],
       "providerId": "naver-cloud-platform",
-      "services": [
-        "CLOVA OCR",
-        "CLOVA Studio"
-      ],
-      "title": "제품 라벨을 근거 데이터 후보로 바꾸기",
-      "why": "이미 결정적 안전 규칙과 근거 스키마가 있어 OCR·추출 정확도를 바로 측정할 수 있습니다.",
-      "pilot": "제품 라벨 이미지 30건을 OCR하고 성분명·함량·단위 추출 정확도를 기존 수작업 기준과 비교",
-      "budgetCapKrw": 120000,
+      "grantId": "ncp-new-customer-plus",
+      "services": ["Cloud Functions", "Cron Trigger", "Object Storage"],
+      "title": "한국·싱가포르·일본에서 서비스 상태를 계속 확인하기",
+      "cloudExclusiveCapability": "꺼져 있는 개인 PC와 무관하게 서로 다른 세 리전의 네트워크에서 정해진 시간마다 실행됩니다.",
+      "gptSubstitute": false,
+      "why": "GPT는 코드를 작성할 수는 있지만 24시간 세 리전의 외부 실행 위치와 독립적인 네트워크 관측값을 제공하지 못합니다.",
+      "pilot": "공개 health URL 3개를 세 리전에서 15분마다 7일간 확인하고 상태 코드·지연시간·리전만 저장",
+      "budgetCapKrw": 80000,
       "readiness": "next",
-      "stopRule": "필드 정확도 90% 미만이거나 건당 검수 시간이 수작업보다 길면 중단"
+      "unlockConditions": [
+        "민감정보가 없는 HTTPS health URL만 등록",
+        "KR·SGN·JPN Action마다 동일한 검증 코드를 배포",
+        "응답 본문을 저장하지 않도록 확인"
+      ],
+      "stopRule": "14일 동안 리전별 차이와 로컬 부재 시간의 장애 탐지가 모두 0이면 주기를 낮추거나 중단"
     },
     {
       "priority": 2,
-      "projects": [
-        "company-work-capture",
-        "cloud-credit-lab"
-      ],
+      "projects": ["wellnessbox-rnd", "studyforge", "window-back-recorder", "cloud-credit-lab"],
       "providerId": "naver-cloud-platform",
-      "services": [
-        "CLOVA OCR",
-        "CLOVA Studio",
-        "Object Storage"
+      "grantId": "ncp-new-customer-plus",
+      "services": ["Object Storage", "Lifecycle Policy"],
+      "title": "PC가 고장 나도 핵심 결과물을 해시로 복구하기",
+      "cloudExclusiveCapability": "원본 PC와 물리적으로 분리된 저장소에서 private 객체를 다시 내려받아 원본 SHA-256과 비교합니다.",
+      "gptSubstitute": false,
+      "why": "GPT는 파일을 설명할 수 있지만 PC 고장과 분리된 내구성, 보존 정책, 실제 복구 경로를 제공하지 못합니다.",
+      "pilot": "민감정보 없는 릴리스 매니페스트·평가 보고서 10개를 올리고 무작위 3개를 내려받아 해시 검증",
+      "budgetCapKrw": 50000,
+      "readiness": "active",
+      "unlockConditions": [
+        "명시적으로 선택한 단일 파일만 업로드",
+        "시크릿·DB·개인정보 경로 차단",
+        "private ACL과 복구 해시 검증 유지"
       ],
-      "title": "TIPS·회사 문서를 검색 가능한 작업 기록으로 만들기",
-      "why": "문서 수집·정리 목적과 맞고 PDF·이미지·보고서 결과물을 공용 저장소에 남길 수 있습니다.",
-      "pilot": "민감정보가 없는 샘플 문서 20건에서 과제·근거·기한·담당 필드를 추출",
-      "budgetCapKrw": 100000,
-      "readiness": "next",
-      "stopRule": "근거 위치 추적이 안 되거나 핵심 필드 정확도 90% 미만이면 자동 반영 금지"
+      "stopRule": "복구 성공률이 100%가 아니거나 복구 절차가 문서 없이 재현되지 않으면 확대 금지"
     },
     {
       "priority": 3,
-      "projects": [
-        "wellnessbox-rnd"
+      "projects": ["window-back-recorder"],
+      "providerId": "naver-cloud-platform",
+      "grantId": "ncp-new-customer-plus",
+      "services": ["VOD Station", "Object Storage", "Global Edge"],
+      "title": "녹화 파일을 기기별 영상·썸네일·HLS로 변환하기",
+      "cloudExclusiveCapability": "대용량 미디어를 관리형 인코더와 CDN 전달망에서 여러 해상도·썸네일·스트리밍 패킷으로 변환합니다.",
+      "gptSubstitute": false,
+      "why": "GPT는 영상을 인코딩하거나 CDN으로 지속 송출하지 못합니다. 로컬 ffmpeg와 달리 PC가 꺼져도 변환·전달이 이어집니다.",
+      "pilot": "민감정보 없는 10분 이하 녹화 3개만 SD·HD 단일패스로 변환하고 썸네일·HLS 재생을 확인",
+      "budgetCapKrw": 70000,
+      "readiness": "setup-needed",
+      "unlockConditions": [
+        "녹화·업로드 권한이 명확한 샘플만 사용",
+        "채널 생성 전 요금과 Global Edge 연동 비용 확인",
+        "파일럿 종료 직후 채널과 불필요한 객체 삭제"
       ],
-      "providerId": "kakao-cloud",
-      "services": [
-        "GPU Virtual Machine",
-        "Kubeflow",
-        "Object Storage"
-      ],
-      "title": "480-case replay와 학습 실험을 짧게 병렬화하기",
-      "why": "frozen eval과 replay 지표가 이미 있어 GPU 이전 전후 시간·비용·결과를 재현 가능하게 비교할 수 있습니다.",
-      "pilot": "현재 고정 cohort 한 개만 컨테이너로 실행하고 종료 후 인스턴스를 자동 삭제",
-      "budgetCapKrw": 500000,
-      "readiness": "blocked",
-      "stopRule": "로컬 대비 3배 이상 빨라지지 않거나 재현 지표가 달라지면 확장 금지"
+      "stopRule": "다른 기기 재생 수요가 없거나 로컬 MP4 공유보다 복잡하면 채널을 즉시 삭제하고 중단"
     },
     {
       "priority": 4,
-      "projects": [
-        "insane-search-testbed"
+      "projects": ["attendance", "cloud-credit-lab"],
+      "providerId": "naver-cloud-platform",
+      "grantId": "ncp-new-customer-plus",
+      "services": ["SENS SMS", "Cloud Functions"],
+      "title": "장애와 승인 대기를 실제 휴대전화로 전달하기",
+      "cloudExclusiveCapability": "통신사 SMS 전달망을 통해 브라우저나 PC가 꺼져 있어도 사람에게 알림을 전달하고 수신 결과를 조회합니다.",
+      "gptSubstitute": false,
+      "why": "GPT는 메시지 문구를 만들 수 있지만 통신사 전달, 발신번호 관리, 실제 단말 수신 결과는 제공하지 못합니다.",
+      "pilot": "등록된 테스트 번호 1개에 승인된 장애 시나리오 문자 3건만 발송하고 수신 결과 확인",
+      "budgetCapKrw": 30000,
+      "readiness": "approval-needed",
+      "unlockConditions": [
+        "발신 번호 등록 완료",
+        "수신자와 테스트 문구에 대한 사용자 승인",
+        "중복 알림 방지와 일일 발송 상한 설정"
       ],
-      "providerId": "kakao-cloud",
-      "services": [
-        "Advanced Managed Search",
-        "Object Storage"
-      ],
-      "title": "한국어 검색·벡터 검색 품질 비교하기",
-      "why": "검색 테스트베드가 이미 있어 관리형 검색의 품질과 운영 부담을 같은 질의 세트로 비교할 수 있습니다.",
-      "pilot": "고정 질의 100개와 소형 문서 corpus로 로컬 검색 대비 recall·latency 측정",
-      "budgetCapKrw": 300000,
-      "readiness": "blocked",
-      "stopRule": "recall 개선이 5%p 미만이고 운영 비용만 늘면 중단"
+      "stopRule": "브라우저 푸시나 기존 채널로 충분하거나 오탐 문자가 1건이라도 발생하면 자동 발송 중단"
     },
     {
       "priority": 5,
-      "projects": [
-        "window-back-recorder"
+      "projects": ["cloud-credit-lab"],
+      "providerId": "kakao-cloud",
+      "grantId": "kakao-rocket-launcher-issued",
+      "services": ["Advanced Managed Search", "Object Storage"],
+      "title": "운영 이벤트가 실제 대규모가 될 때 관리형 검색 열기",
+      "cloudExclusiveCapability": "다중 가용 영역의 관리형 OpenSearch 클러스터가 노드·샤드·장애 복구·수명주기를 운영합니다.",
+      "gptSubstitute": false,
+      "why": "현재 데이터량에는 과잉입니다. 지속적인 대규모 로그가 생겼을 때만 클러스터 운영 자체를 외부화할 가치가 있습니다.",
+      "pilot": "현재는 실행하지 않음. 공개 운영 이벤트가 100,000건을 넘으면 7일짜리 검색·복구 시험 설계",
+      "budgetCapKrw": 0,
+      "readiness": "parked",
+      "unlockConditions": [
+        "검색 대상 운영 이벤트 100,000건 이상",
+        "SQLite나 정적 JSON 검색이 실제 SLA를 못 맞춘 측정 결과",
+        "클러스터 생성·삭제 자동화와 최대 7일 TTL"
       ],
-      "providerId": "naver-cloud-platform",
-      "services": [
-        "CLOVA Speech",
-        "Object Storage"
-      ],
-      "title": "녹화 파일에 검색 가능한 전사본 붙이기",
-      "why": "긴 영상·타임스탬프·배치 전사를 지원해 녹화 아카이브를 다시 찾기 쉬워집니다.",
-      "pilot": "민감정보가 없는 10분 이내 녹화 3개를 전사하고 키워드 검색 가능 여부 확인",
-      "budgetCapKrw": 30000,
-      "readiness": "later",
-      "stopRule": "한국어 고유명사 보정 후에도 검색용 정확도가 부족하면 중단"
+      "stopRule": "로컬 인덱스 대비 운영시간 절감이 없거나 클러스터 상시 비용을 정당화하지 못하면 삭제"
     },
     {
       "priority": 6,
-      "projects": [
-        "n8n-youtube-shorts-automation"
+      "projects": ["wellnessbox-rnd"],
+      "providerId": "kakao-cloud",
+      "grantId": "kakao-rocket-launcher-issued",
+      "services": ["GPU Virtual Machine", "Kubeflow"],
+      "title": "연구 게이트가 GO가 된 뒤에만 GPU 열기",
+      "cloudExclusiveCapability": "검증된 대규모 병렬 작업을 로컬 장비와 분리된 GPU에서 짧게 확장하고 종료할 수 있습니다.",
+      "gptSubstitute": false,
+      "why": "현재 wellnessbox-rnd의 병목은 계산량이 아니라 합성 데이터·평가 근거이며 training gate도 NO-GO라 지금 GPU를 쓰면 낭비입니다.",
+      "pilot": "현재는 실행하지 않음. training gate가 GO가 된 첫 컨테이너 작업 한 개만 로컬과 비교",
+      "budgetCapKrw": 0,
+      "readiness": "parked",
+      "unlockConditions": [
+        "training_readiness_gate가 명시적으로 GO",
+        "동일 작업의 로컬 실행이 30분 이상",
+        "컨테이너·seed·입출력 해시가 고정됨",
+        "완료 후 인스턴스 자동 삭제 가능"
       ],
-      "providerId": "naver-cloud-platform",
-      "services": [
-        "Object Storage"
+      "stopRule": "로컬 대비 3배 이상 빠르지 않거나 결과 해시·공식 지표가 달라지면 즉시 중단"
+    },
+    {
+      "priority": 7,
+      "projects": ["wellnessbox-rnd", "cloud-credit-lab"],
+      "providerId": "kakao-cloud",
+      "grantId": "kakao-rocket-launcher-issued",
+      "services": ["Object Storage", "Lifecycle Policy"],
+      "title": "단일 클라우드 복구가 중요해질 때 두 번째 보관소 열기",
+      "cloudExclusiveCapability": "서로 다른 사업자의 물리·계정 장애 영역에 동일 해시 객체를 분리 보관합니다.",
+      "gptSubstitute": false,
+      "why": "GPT는 사업자 장애와 계정 잠금에 대비한 두 번째 독립 저장소가 될 수 없습니다.",
+      "pilot": "현재는 실행하지 않음. NCP 복구 훈련이 안정화된 뒤 핵심 매니페스트 3개만 교차 복제",
+      "budgetCapKrw": 0,
+      "readiness": "parked",
+      "unlockConditions": [
+        "Kakao IAM·S3 키 발급",
+        "NCP 단일 저장소 장애가 사업 연속성 위험이라는 근거",
+        "양쪽에서 같은 SHA-256으로 복구하는 자동 검증"
       ],
-      "title": "완성본과 생성 원본을 저비용으로 보관하기",
-      "why": "현재 영상은 정적 카드와 BGM이므로 Speech나 Voice보다 결과물 아카이브가 실제 구조에 맞습니다.",
-      "pilot": "공개 완료된 MP4와 생성 메타데이터 10세트만 보관하고 복원 시간을 측정",
-      "budgetCapKrw": 20000,
-      "readiness": "later",
-      "stopRule": "로컬·Drive 백업보다 복원 절차가 복잡하면 중단"
+      "stopRule": "복구 중요도가 낮거나 운영 복잡성이 단일 저장소 위험보다 크면 도입하지 않음"
+    }
+  ],
+  "rejectedIdeas": [
+    {
+      "idea": "CLOVA OCR·Studio로 라벨과 문서 추출",
+      "reason": "이미 사용 중인 범용 GPT와 로컬 도구로 충분히 구현 가능하며 클라우드 크레딧만의 장점이 아님",
+      "replacement": "필요하면 기존 GPT 경로를 사용하고 클라우드 예산에서는 제외"
+    },
+    {
+      "idea": "CLOVA Speech로 녹화물 전사",
+      "reason": "범용 음성 모델로 대체 가능하고 현재 핵심 프로젝트 병목도 아님",
+      "replacement": "실제 검색 수요가 확인되기 전에는 로컬 또는 기존 AI 사용"
+    },
+    {
+      "idea": "insane-search-testbed를 벡터 검색 서비스로 전환",
+      "reason": "이 프로젝트는 검색엔진이 아니라 공개 웹 수집기의 차단 대응 테스트베드임",
+      "replacement": "세 리전 외부 네트워크에서 도달 가능성과 지연시간만 관측"
+    },
+    {
+      "idea": "wellnessbox-rnd GPU 학습 즉시 실행",
+      "reason": "현재 공식 병목은 데이터·증거 품질이고 training readiness가 NO-GO임",
+      "replacement": "GO 판정과 30분 이상 로컬 병목이 함께 생길 때만 해제"
+    },
+    {
+      "idea": "n8n 쇼츠에 VOD Station 추가",
+      "reason": "현재 YouTube가 업로드 영상을 이미 변환·배포하므로 같은 기능을 중복 구매하게 됨",
+      "replacement": "VOD 파일럿은 자체 재생 수요가 있는 window-back-recorder로 제한"
+    },
+    {
+      "idea": "Kubernetes·Kafka·관리형 검색을 크레딧 소진용으로 상시 운영",
+      "reason": "현재 트래픽·이벤트 규모에서 운영 복잡성과 상시 비용만 늘어남",
+      "replacement": "측정된 규모 임계값을 넘을 때 한시적 파일럿만 승인"
     }
   ],
   "completedChecks": [
-    "NCP Region API HTTP 200",
+    "NCP Region API HTTP 200 및 KR·SGN·JPN 확인",
     "NCP 2026-07 billing snapshot 0 KRW",
-    "NCP Object Storage create/put/get/delete 성공"
-  ],
-  "doNotSpendOn": [
-    "기존 Vercel 앱을 이유 없이 VM으로 이전",
-    "항상 켜진 GPU·Kubernetes 클러스터",
-    "평가 데이터가 없는 생성형 AI 데모",
-    "n8n 쇼츠 워크플로에 TTS를 다시 추가",
-    "마켓플레이스·유료 OS 이미지처럼 크레딧 적용이 제외된 항목"
+    "NCP Object Storage create·put·get·delete 성공",
+    "private 포트폴리오 객체 업로드와 중복 방지 성공"
   ],
   "officialReferences": [
-    "https://guide.ncloud-docs.com/docs/clovastudio-overview",
-    "https://guide.ncloud-docs.com/docs/clovaocr-overview",
-    "https://guide.ncloud-docs.com/docs/clovaspeech-overview",
-    "https://guide.ncloud-docs.com/docs/cloudfunctions-overview",
-    "https://guide.ncloud-docs.com/docs/en/storage-storage-6-1",
-    "https://docs.kakaocloud.com/service/ai-service/kubeflow/kubeflow-overview",
-    "https://docs.kakaocloud.com/service/storage/object-storage/object-storage-overview",
-    "https://kakaocloud.com/services/virtual-machine/intro"
+    "https://guide.ncloud-docs.com/docs/en/cloudfunctions-overview",
+    "https://guide.ncloud-docs.com/docs/en/cloudfunctions-example-nodejs",
+    "https://guide.ncloud-docs.com/docs/en/cloudfunctions-spec-runtime",
+    "https://guide.ncloud-docs.com/release-20260423/docs/en/vodstation-vodstationoverview",
+    "https://www.ncloud.com/api-cms/service-product/static/newVodStation",
+    "https://guide.ncloud-docs.com/docs/sens-overview",
+    "https://guide.ncloud-docs.com/docs/en/media-media-3-1",
+    "https://docs.kakaocloud.com/en/service/analytics/advanced-managed-search/ams-overview",
+    "https://docs.kakaocloud.com/en/service/storage/object-storage/object-storage-overview"
   ]
 }

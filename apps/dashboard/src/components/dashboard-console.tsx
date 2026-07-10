@@ -8,7 +8,6 @@ import {
   CreditCard,
   Database,
   Eye,
-  FileSearch,
   KeyRound,
   Play,
   RefreshCcw,
@@ -43,13 +42,6 @@ type RunResult = {
   bucketName?: string;
   objectName?: string;
   request?: string;
-  model?: string;
-  output?: string;
-  usage?: {
-    prompt_tokens?: number;
-    completion_tokens?: number;
-    total_tokens?: number;
-  };
   steps?: Step[];
 };
 
@@ -63,7 +55,7 @@ type ConfigStatus = {
 };
 
 type Experiment = {
-  id: "region" | "cost" | "object-storage" | "clova-studio";
+  id: "region" | "cost" | "object-storage";
   title: string;
   service: string;
   cost: string;
@@ -130,17 +122,6 @@ const experiments: Experiment[] = [
     icon: Database,
     accent: "amber",
   },
-  {
-    id: "clova-studio",
-    title: "HyperCLOVA X 추출",
-    service: "CLOVA Studio",
-    cost: "1회 · 1,000원 이하 상한",
-    endpoint: "/api/ncp/clova-studio-smoke",
-    dryRunSummary: "합성 라벨과 120-token 요청을 확인합니다.",
-    executeSummary: "합성 라벨에서 성분·함량·단위를 JSON으로 추출합니다.",
-    icon: FileSearch,
-    accent: "blue",
-  },
 ];
 
 const envLabels = [
@@ -150,8 +131,6 @@ const envLabels = [
   "NCP_BILLING_API_ENDPOINT",
   "NCP_OBJECT_STORAGE_ENDPOINT",
   "NCP_OBJECT_STORAGE_ACCESS_KEY_ID",
-  "NCP_CLOVASTUDIO_API_KEY",
-  "NCP_CLOVASTUDIO_BASE_URL",
   "DASHBOARD_RUN_TOKEN",
 ];
 
@@ -548,26 +527,6 @@ export function DashboardConsole({ initialConfig }: { initialConfig: ConfigStatu
                     <div className="detail-row">
                       <span>객체</span>
                       <strong>{result.objectName}</strong>
-                    </div>
-                  ) : null}
-                  {result.model ? (
-                    <div className="detail-row">
-                      <span>모델</span>
-                      <strong>{result.model}</strong>
-                    </div>
-                  ) : null}
-                  {result.usage ? (
-                    <div className="detail-row">
-                      <span>토큰</span>
-                      <strong>
-                        입력 {result.usage.prompt_tokens ?? "-"} · 출력 {result.usage.completion_tokens ?? "-"}
-                      </strong>
-                    </div>
-                  ) : null}
-                  {result.output ? (
-                    <div className="detail-row">
-                      <span>추출 결과</span>
-                      <strong className="result-output">{result.output}</strong>
                     </div>
                   ) : null}
                 </div>

@@ -1,18 +1,29 @@
 # Naver Cloud Platform
 
-Status: active first provider.
+확정 크레딧:
 
-Confirmed credits:
+- 300,000원, 2026-07-31 만료
+- 5,000,000원, 2027-04-30 만료
+- Greenhouse 추가 5,000,000원은 별도 신청 가능성
 
-- 300,000 KRW, expires 2026-07-31.
-- 5,000,000 KRW, expires 2027-04-30.
-- Greenhouse Track 1 can provide another 5,000,000 KRW after an additional request.
+## 현재 역할
 
-## Credentials
+NCP는 범용 AI 공급자가 아니라 첫 **외부 실행·복구·전달 인프라** 공급자로 사용합니다.
 
-Put actual values in `.env.local`.
+- Cloud Functions: KR·SGN·JPN cron probe
+- Object Storage: private upload와 실제 restore hash check
+- VOD Station: 관리형 인코딩·thumbnail·HLS
+- SENS: 승인된 테스트 SMS와 수신 결과
 
-Required for generic NCP API access:
+공식 문서:
+
+- [Cloud Functions overview](https://guide.ncloud-docs.com/docs/en/cloudfunctions-overview)
+- [Node.js Action contract](https://guide.ncloud-docs.com/docs/en/cloudfunctions-example-nodejs)
+- [Current runtime support](https://guide.ncloud-docs.com/docs/en/cloudfunctions-spec-runtime) — Node.js 22
+- [VOD Station product](https://www.ncloud.com/api-cms/service-product/static/newVodStation)
+- [SENS overview](https://guide.ncloud-docs.com/docs/sens-overview)
+
+## 환경 변수
 
 ```text
 NCP_ACCESS_KEY_ID=
@@ -20,82 +31,27 @@ NCP_SECRET_KEY=
 NCP_REGION=KR
 NCP_API_ENDPOINT=https://ncloud.apigw.ntruss.com
 NCP_BILLING_API_ENDPOINT=https://billingapi.apigw.ntruss.com
-```
-
-Optional service-specific variables:
-
-```text
 NCP_OBJECT_STORAGE_ENDPOINT=https://kr.object.ncloudstorage.com
 NCP_OBJECT_STORAGE_REGION=kr-standard
 NCP_OBJECT_STORAGE_ACCESS_KEY_ID=
 NCP_OBJECT_STORAGE_SECRET_KEY=
 NCP_ARTIFACT_BUCKET=
-NCP_CLOVASTUDIO_API_KEY=
-NCP_CLOVASTUDIO_API_GATEWAY_KEY=
-NCP_CLOVASTUDIO_BASE_URL=https://clovastudio.stream.ntruss.com/v1/openai
-NCP_CLOVASTUDIO_MODEL=HCX-DASH-002
 ```
 
-## First setup checklist
+## 확인된 상태
 
-- Keep the two issued grants and their expiration dates separate in the ledger.
-- Confirm which services the credit can actually cover.
-- Create access keys with the smallest practical permission scope.
-- Run `npm run check:env:naver` after filling `.env.local`.
-- Run `npm run check:secrets` before committing or deploying.
-- Record the first successful API call as an experiment note.
+- Region API: HTTP 200, KR·SGN·JPN 확인
+- Billing snapshot: 2026-07 비용 0원
+- Object Storage: create·put·get·delete 성공
+- private content-addressed object 업로드 성공
+- restore SHA-256 CLI와 Cloud Functions Action package 구현
 
-## Local setup status
+## 다음 외부 설정
 
-- 2026-05-13: Local `.env.local` configured on `C:\dev\cloud-credit-lab`.
-- 2026-05-13: `core.hooksPath` configured to `.githooks` so pre-commit runs the secret scan.
-- 2026-05-13: NCP metadata smoke test succeeded with region codes `KR`, `SGN`, `JPN`.
-- 2026-05-13: Billing snapshot for `202605` succeeded and returned 0 cost rows.
-- 2026-07-10: Object Storage create/put/get/delete smoke test succeeded and cleaned up the temporary resources.
-- 2026-07-10: A private persistent artifact bucket was created and one content-addressed portfolio JSON was uploaded.
-- 2026-07-10: CLOVA Studio dry-run is implemented; the API key is the remaining blocker for a live call.
-- No actual key values are stored in tracked files.
+1. 공개 health URL을 확정
+2. `cloud-functions/multi-region-probe`를 KR·SGN·JPN에 배포
+3. 15분 Cron Trigger 설정
+4. 비민감 영상 3개를 고른 뒤 VOD 채널을 파일럿 기간에만 생성
+5. SENS는 발신번호·수신자·문구 승인 후 3건만 발송
 
-## Smoke test
-
-Use the metadata-only region list call before any paid service test.
-
-```powershell
-npm run ncp:smoke
-npm run ncp:smoke:execute
-```
-
-The execute command calls `GET /vserver/v2/getRegionList?responseFormatType=json`.
-Expected cost is 0 KRW because it only reads provider metadata and does not create resources.
-
-## Billing snapshot
-
-```powershell
-npm run ncp:cost:snapshot
-npm run ncp:cost:snapshot:execute
-npm run ncp:cost:snapshot:execute -- --month=202605
-```
-
-The execute command reads monthly contract demand costs for one month and prints only row counts and demand totals.
-
-## Experiment candidates
-
-- Object Storage bucket for generated research/TIPS files.
-- OCR/document extraction on sample PDFs from `C:\Users\hjyeo\Desktop\웰박\10 TIPS`.
-- CLOVA Studio summarization/extraction test for R&D/reporting material.
-- CDN/static delivery for generated assets.
-
-## Object Storage smoke test
-
-```powershell
-npm run ncp:object-storage:smoke
-npm run ncp:object-storage:smoke:execute
-```
-
-The execute command creates one temporary bucket, uploads one tiny text object,
-downloads it for verification, deletes the object, and deletes the bucket.
-This is a Tier 1 test with a 1,000 KRW cap and expected near-zero usage.
-
-Set `NCP_OBJECT_STORAGE_ACCESS_KEY_ID` and `NCP_OBJECT_STORAGE_SECRET_KEY` in
-`.env.local` before running the execute command. The generic NCP API key is not
-used for this test because Object Storage's S3-compatible API may reject it.
+CLOVA Studio/OCR/Speech는 크레딧 우선순위에서 제거했습니다.

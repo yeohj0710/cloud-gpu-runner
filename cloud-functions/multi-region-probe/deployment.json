@@ -1,0 +1,21 @@
+{
+  "runtime": "nodejs:22",
+  "main": "main",
+  "memoryMb": 128,
+  "timeoutMs": 10000,
+  "platforms": {
+    "KR": "classic-or-vpc",
+    "SGN": "vpc-required",
+    "JPN": "vpc-required"
+  },
+  "trigger": {
+    "type": "cron",
+    "schedule": "*/15 * * * *"
+  },
+  "limits": {
+    "maxTargets": 20,
+    "requestTimeoutMs": 5000,
+    "storeResponseBody": false,
+    "storeUrlInResult": false
+  }
+}

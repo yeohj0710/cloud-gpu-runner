@@ -366,6 +366,108 @@ function failureSummary(text) {
   return [code, message].filter(Boolean).join(": ") || text.slice(0, 300) || "no response body";
 }
 
+function assertRemoteObjectKey(objectKey) {
+  if (
+    typeof objectKey !== "string" ||
+    objectKey.length === 0 ||
+    objectKey.startsWith("/") ||
+    objectKey.includes("\\") ||
+    objectKey.split("/").some((segment) => segment === "..")
+  ) {
+    throw new Error("Remote object key is invalid.");
+  }
+
+  return objectKey;
+}
+
+async function readResponseBodyLimited(response, maxBytes, label) {
+  const contentLength = Number(response.headers.get("content-length"));
+  if (Number.isFinite(contentLength) && contentLength > maxBytes) {
+    await response.body?.cancel?.().catch(() => {});
+    throw new Error(`${label} exceeds the restore limit of ${maxBytes} bytes.`);
+  }
+
+  const reader = response.body?.getReader?.();
+  if (!reader) {
+    const body = Buffer.from(await response.arrayBuffer());
+    if (body.length > maxBytes) {
+      throw new Error(`${label} exceeds the restore limit of ${maxBytes} bytes.`);
+    }
+    return body;
+  }
+
+  const chunks = [];
+  let totalBytes = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    totalBytes += value.byteLength;
+    if (totalBytes > maxBytes) {
+      await reader.cancel().catch(() => {});
+      throw new Error(`${label} exceeds the restore limit of ${maxBytes} bytes.`);
+    }
+    chunks.push(Buffer.from(value));
+  }
+
+  return Buffer.concat(chunks, totalBytes);
+}
+
+export async function verifyPublishedArtifact({
+  config,
+  bucket,
+  objectKey,
+  expectedSha256,
+  maxBytes = DEFAULT_MAX_BYTES,
+  fetchImpl = fetch,
+}) {
+  if (!bucket) {
+    throw new Error("Artifact bucket is not configured.");
+  }
+  if (!config.accessKey || !config.secretKey) {
+    throw new Error("Missing S3-compatible credentials for restore verification.");
+  }
+  if (!/^[a-f0-9]{64}$/.test(expectedSha256 ?? "")) {
+    throw new Error("Expected SHA-256 must be 64 lowercase hexadecimal characters.");
+  }
+  if (!Number.isFinite(maxBytes) || maxBytes <= 0) {
+    throw new Error("Restore size limit must be a positive number.");
+  }
+
+  const safeObjectKey = assertRemoteObjectKey(objectKey);
+  const uri = canonicalPath(bucket, safeObjectKey);
+  const headers = makeAuthorization({ config, method: "GET", uri });
+  const response = await fetchImpl(`${config.endpoint.replace(/\/+$/, "")}${uri}`, {
+    method: "GET",
+    headers,
+  });
+
+  if (response.status !== 200) {
+    const errorBody = (await readResponseBodyLimited(response, 4096, "Remote error response")).toString(
+      "utf8",
+    );
+    throw new Error(
+      `Restore download failed with HTTP ${response.status}: ${failureSummary(errorBody)}`,
+    );
+  }
+
+  const body = await readResponseBodyLimited(response, maxBytes, "Remote object");
+
+  const actualSha256 = sha256Hex(body);
+  if (actualSha256 !== expectedSha256) {
+    throw new Error(
+      `Remote object SHA-256 mismatch: expected ${expectedSha256}, received ${actualSha256}.`,
+    );
+  }
+
+  return {
+    verified: true,
+    httpStatus: response.status,
+    sizeBytes: body.length,
+    sha256: actualSha256,
+  };
+}
+
 export async function publishArtifact({ plan, config, createBucket = false }) {
   if (!plan.bucket) {
     throw new Error("Artifact bucket is not configured.");

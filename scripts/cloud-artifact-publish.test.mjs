@@ -9,6 +9,8 @@ import {
   buildObjectKey,
   createPublishPlan,
   parseArgs,
+  providerConfig,
+  verifyPublishedArtifact,
 } from "./lib/artifact-publish.mjs";
 
 test("buildObjectKey creates a dated, content-addressed project key", () => {
@@ -73,6 +75,14 @@ test("parseArgs keeps uploads in dry-run mode by default", () => {
   );
 });
 
+test("providerConfig uses the canonical Kakao artifact bucket variable", () => {
+  const config = providerConfig("kakao", {
+    KAKAO_CLOUD_ARTIFACT_BUCKET: "kakao-private-artifacts",
+  });
+
+  assert.equal(config.bucket, "kakao-private-artifacts");
+});
+
 test("createPublishPlan calculates a digest without exposing credentials", async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "artifact-plan-"));
   const devRoot = path.join(tempDir, "dev");
@@ -118,5 +128,96 @@ test("createPublishPlan rejects embedded secret assignments", async () => {
       bucket: "private-artifacts",
     }),
     /looks sensitive/i,
+  );
+});
+
+test("verifyPublishedArtifact proves a remote object matches its expected SHA-256", async () => {
+  const body = Buffer.from('{"restored":true}', "utf8");
+  const expectedSha256 = "6ec078c7b2b2f90728687b1588887a92cbafd6df49fcefa71719804506ed9204";
+
+  const result = await verifyPublishedArtifact({
+    config: {
+      endpoint: "https://object.example.com",
+      region: "kr-standard",
+      accessKey: "test-access",
+      secretKey: "test-secret",
+    },
+    bucket: "private-artifacts",
+    objectKey: "projects/cloud-credit-lab/2026-07-10/6ec078c7b2b2-report.json",
+    expectedSha256,
+    maxBytes: 1024,
+    fetchImpl: async () => ({
+      status: 200,
+      headers: new Headers({ "content-length": String(body.length) }),
+      arrayBuffer: async () => body,
+    }),
+  });
+
+  assert.deepEqual(result, {
+    verified: true,
+    httpStatus: 200,
+    sizeBytes: body.length,
+    sha256: expectedSha256,
+  });
+});
+
+test("verifyPublishedArtifact rejects hash mismatches and oversized downloads", async () => {
+  const body = Buffer.from("unexpected", "utf8");
+  const base = {
+    config: {
+      endpoint: "https://object.example.com",
+      region: "kr-standard",
+      accessKey: "test-access",
+      secretKey: "test-secret",
+    },
+    bucket: "private-artifacts",
+    objectKey: "projects/cloud-credit-lab/2026-07-10/expected-report.json",
+    expectedSha256: "a".repeat(64),
+  };
+
+  await assert.rejects(
+    verifyPublishedArtifact({
+      ...base,
+      maxBytes: 1024,
+      fetchImpl: async () => ({
+        status: 200,
+        headers: new Headers({ "content-length": String(body.length) }),
+        arrayBuffer: async () => body,
+      }),
+    }),
+    /SHA-256 mismatch/,
+  );
+
+  await assert.rejects(
+    verifyPublishedArtifact({
+      ...base,
+      maxBytes: 4,
+      fetchImpl: async () => ({
+        status: 200,
+        headers: new Headers({ "content-length": String(body.length) }),
+        arrayBuffer: async () => body,
+      }),
+    }),
+    /exceeds the restore limit/,
+  );
+
+  const streamingResponse = new Response(
+    new ReadableStream({
+      start(controller) {
+        controller.enqueue(Buffer.from("123"));
+        controller.enqueue(Buffer.from("456"));
+        controller.close();
+      },
+    }),
+    { status: 200 },
+  );
+
+  await assert.rejects(
+    verifyPublishedArtifact({
+      ...base,
+      maxBytes: 4,
+      fetchImpl: async () => streamingResponse,
+    }),
+    /exceeds the restore limit/,
   );
 });

@@ -1,14 +1,15 @@
 import {
   ArrowRight,
   BadgeCheck,
-  Box,
-  CircleDollarSign,
-  Clock3,
+  Ban,
+  Clapperboard,
   CloudCog,
-  FileSearch,
+  Globe2,
+  HardDriveDownload,
   LockKeyhole,
-  Search,
-  ServerCog,
+  MessageSquareText,
+  PauseCircle,
+  ShieldCheck,
   TriangleAlert,
 } from "lucide-react";
 
@@ -20,12 +21,22 @@ const providerLabels: Record<string, string> = {
 };
 
 const readinessLabels = {
-  next: "바로 시작",
-  blocked: "설정 필요",
-  later: "다음 순서",
+  next: "다음 실행",
+  active: "검증 중",
+  "setup-needed": "설정 필요",
+  "approval-needed": "승인 필요",
+  parked: "보류",
 } as const;
 
-const opportunityIcons = [FileSearch, CloudCog, ServerCog, Search, Box, CircleDollarSign];
+const opportunityIcons = [
+  Globe2,
+  HardDriveDownload,
+  Clapperboard,
+  MessageSquareText,
+  CloudCog,
+  PauseCircle,
+  LockKeyhole,
+];
 
 function deadlineLabel(daysRemaining: number, expired: boolean) {
   if (expired) return "만료됨";
@@ -37,24 +48,28 @@ export function CreditStrategy({ portfolio }: { portfolio: PortfolioView }) {
   const naver = portfolio.providers.find((provider) => provider.id === "naver-cloud-platform");
   const kakao = portfolio.providers.find((provider) => provider.id === "kakao-cloud");
   const urgentGrant = naver?.grants.find((grant) => grant.id === "ncp-new-customer-plus");
+  const urgentAllocation = portfolio.allocations.find(
+    (allocation) => allocation.id === "ncp-urgent-cloud-only",
+  );
 
   return (
     <>
       <header className="strategy-hero">
         <div className="strategy-hero-copy">
-          <p className="section-label">Cloud Credit Lab · {portfolio.asOf.replaceAll("-", ".")} 기준</p>
-          <h1>남은 크레딧, 먼저 쓸 곳이 정해졌어요</h1>
+          <p className="section-label">Cloud-native only · {portfolio.asOf.replaceAll("-", ".")} 기준</p>
+          <h1>GPT가 못 하는 일에만 크레딧을 써요</h1>
           <p className="hero-description">
-            가장 빨리 끝나는 네이버 30만원은 제품 라벨과 연구 문서 처리에 먼저 씁니다.
-            카카오 크레딧은 로컬에서 오래 걸리는 R&amp;D 계산에만 배정해요.
+            요약·OCR·일반 AI 실험은 모두 뺐습니다. 개인 PC가 꺼져도 여러 나라에서 계속
+            실행되는 것, PC 고장과 분리된 복구, 통신사·CDN 전달망처럼 클라우드가 실제 능력을
+            더하는 일만 남겼어요.
           </p>
           <div className="hero-actions">
             <a className="button button-primary" href="#opportunities">
-              프로젝트별 활용 보기
+              통과한 활용안 보기
               <ArrowRight size={17} aria-hidden="true" />
             </a>
-            <a className="button button-ghost" href="#experiments">
-              연결 실험 열기
+            <a className="button button-ghost" href="#rejected">
+              제외한 아이디어 보기
             </a>
           </div>
         </div>
@@ -62,48 +77,47 @@ export function CreditStrategy({ portfolio }: { portfolio: PortfolioView }) {
         <div className="urgent-card">
           <div className="urgent-card-top">
             <span className="badge badge-danger">
-              <Clock3 size={14} aria-hidden="true" />
               {urgentGrant ? deadlineLabel(urgentGrant.daysRemaining, urgentGrant.expired) : "확인 필요"}
             </span>
             <span className="mono">2026.07.31</span>
           </div>
-          <p>네이버 신규 크레딧</p>
-          <strong>{formatKrw(urgentGrant?.amountKrw ?? 300000)}</strong>
-          <span>OCR 12만원 · HyperCLOVA X 10만원 · 나머지는 Speech와 예비비</span>
+          <p>지금 승인한 최대 지출</p>
+          <strong>{formatKrw(urgentAllocation?.committedCapKrw ?? 230000)}</strong>
+          <span>
+            세 리전 외부 실행 · 실제 복구 · 미디어 변환 · 승인된 문자 전달만 테스트합니다.
+          </span>
         </div>
       </header>
 
       <section className="strategy-section" aria-labelledby="credit-title">
         <div className="section-heading">
-          <p className="section-label">확인된 크레딧</p>
-          <h2 id="credit-title">실제 발급 기준으로 {formatKrw(portfolio.confirmedIssuedKrw)}</h2>
-          <p>선정 금액과 발급 금액을 따로 봐야 예산을 두 번 세지 않아요.</p>
+          <p className="section-label">돈보다 먼저 보는 기준</p>
+          <h2 id="credit-title">확정 {formatKrw(portfolio.confirmedIssuedKrw)}, 지금 묶은 돈은 23만원</h2>
+          <p>쓸 수 있다는 이유만으로 쓰지 않습니다. 효과가 증명되지 않은 {formatKrw(portfolio.budgetSummary.parkedKrw)}은 그대로 보류했어요.</p>
         </div>
 
         <div className="credit-grid">
           <article className="credit-card credit-card-urgent">
             <div className="credit-card-title">
-              <span>네이버 · 먼저 사용</span>
-              <TriangleAlert size={20} aria-hidden="true" />
+              <span>네이버 · 7월 파일럿</span>
+              <BadgeCheck size={20} aria-hidden="true" />
             </div>
-            <strong>{formatKrw(300000)}</strong>
-            <p>2026.07.31 만료</p>
-            <div className="credit-progress" aria-label="7월 긴급 예산 배분 완료">
-              <span style={{ width: "40%" }} />
-              <span style={{ width: "33.333%" }} />
-              <span style={{ width: "26.667%" }} />
+            <strong>{formatKrw(urgentAllocation?.committedCapKrw ?? 230000)}</strong>
+            <p>30만원 중 최대 지출 상한</p>
+            <div className="credit-progress" aria-label="긴급 크레딧 23만원 승인, 7만원 보류">
+              <span style={{ width: "76.667%" }} />
             </div>
-            <small>OCR 40% · Studio 33% · 기타 27%</small>
+            <small>23만원 승인 · 7만원 보류</small>
           </article>
 
           <article className="credit-card">
             <div className="credit-card-title">
               <span>네이버 · Greenhouse</span>
-              <BadgeCheck size={20} aria-hidden="true" />
+              <PauseCircle size={20} aria-hidden="true" />
             </div>
-            <strong>{formatKrw(naver?.confirmedIssuedKrw ? naver.confirmedIssuedKrw - 300000 : 5000000)}</strong>
-            <p>2027.04.30 만료 · 추가 500만원 신청 가능</p>
-            <small>공용 문서·근거 처리와 배치 작업에 배정</small>
+            <strong>{formatKrw(5000000)}</strong>
+            <p>2027.04.30 만료</p>
+            <small>7월 파일럿이 실제 가치를 증명할 때까지 전액 보류</small>
           </article>
 
           <article className="credit-card">
@@ -112,48 +126,72 @@ export function CreditStrategy({ portfolio }: { portfolio: PortfolioView }) {
               <LockKeyhole size={20} aria-hidden="true" />
             </div>
             <strong>{formatKrw(kakao?.confirmedIssuedKrw ?? 10000000)}</strong>
-            <p>2027.05.31 만료 · IAM 키 발급 필요</p>
-            <small>2,000만원 선정, 현재 메일로 확인된 발급액은 1,000만원</small>
+            <p>2027.05.31 만료</p>
+            <small>검색 규모·GPU 병목·이중화 필요가 측정될 때까지 전액 보류</small>
           </article>
         </div>
       </section>
 
-      <section className="strategy-section soft-section" id="opportunities" aria-labelledby="opportunity-title">
+      <section className="strategy-section soft-section" aria-labelledby="rule-title">
         <div className="section-heading">
-          <p className="section-label">C:\dev 활용 우선순위</p>
-          <h2 id="opportunity-title">크레딧을 쓰고 나면, 코드와 평가 결과가 남아야 해요</h2>
-          <p>기존 데이터와 테스트가 있는 프로젝트부터 시작하고, 정확도나 속도가 기준을 못 넘으면 바로 멈춥니다.</p>
+          <p className="section-label">새로운 통과 규칙</p>
+          <h2 id="rule-title">“GPT가 답을 만들 수 있나?”가 아니라 “클라우드가 능력을 더하나?”</h2>
+          <p>{portfolio.selectionRule.question}</p>
+        </div>
+        <div className="principle-grid">
+          <article className="principle-card principle-card-pass">
+            <h3><ShieldCheck size={21} aria-hidden="true" /> 이런 경우만 통과</h3>
+            <ul>
+              {portfolio.selectionRule.approveOnlyIf.map((item) => <li key={item}>{item}</li>)}
+            </ul>
+          </article>
+          <article className="principle-card principle-card-blocked">
+            <h3><Ban size={21} aria-hidden="true" /> 이런 경우 바로 탈락</h3>
+            <ul>
+              {portfolio.selectionRule.rejectIf.map((item) => <li key={item}>{item}</li>)}
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section className="strategy-section" id="opportunities" aria-labelledby="opportunity-title">
+        <div className="section-heading">
+          <p className="section-label">C:\dev 재조사 결과</p>
+          <h2 id="opportunity-title">7월 파일럿 후보 4개, 조건이 생길 때까지 잠근 3개</h2>
+          <p>각 항목은 클라우드만의 능력, 해제 조건, 비용 상한, 중단 기준을 모두 가져야 합니다.</p>
         </div>
 
         <div className="opportunity-list">
           {portfolio.opportunities.map((opportunity, index) => {
-            const Icon = opportunityIcons[index] ?? Box;
+            const Icon = opportunityIcons[index] ?? CloudCog;
             return (
               <article className="opportunity-row" key={`${opportunity.priority}-${opportunity.title}`}>
                 <div className="opportunity-rank">{String(opportunity.priority).padStart(2, "0")}</div>
-                <div className="opportunity-icon" aria-hidden="true">
-                  <Icon size={21} />
-                </div>
+                <div className="opportunity-icon" aria-hidden="true"><Icon size={21} /></div>
                 <div className="opportunity-main">
                   <div className="opportunity-kicker">
-                    <span>{providerLabels[opportunity.providerId]}</span>
-                    <span>·</span>
+                    <span>{providerLabels[opportunity.providerId]}</span><span>·</span>
                     <span>{opportunity.services.join(" + ")}</span>
                   </div>
                   <h3>{opportunity.title}</h3>
                   <p>{opportunity.why}</p>
+                  <div className="cloud-proof">
+                    <ShieldCheck size={16} aria-hidden="true" />
+                    <span><strong>GPT 대체 불가</strong> · {opportunity.cloudExclusiveCapability}</span>
+                  </div>
                   <div className="project-tags">
-                    {opportunity.projects.map((project) => (
-                      <code key={project}>{project}</code>
-                    ))}
+                    {opportunity.projects.map((project) => <code key={project}>{project}</code>)}
                   </div>
                 </div>
                 <div className="opportunity-meta">
                   <span className={`badge readiness-${opportunity.readiness}`}>
                     {readinessLabels[opportunity.readiness]}
                   </span>
-                  <strong>{formatKrw(opportunity.budgetCapKrw)} 상한</strong>
+                  <strong>{opportunity.budgetCapKrw > 0 ? `${formatKrw(opportunity.budgetCapKrw)} 상한` : "현재 지출 0원"}</strong>
                   <p>{opportunity.pilot}</p>
+                  <ul className="unlock-list">
+                    {opportunity.unlockConditions.map((condition) => <li key={condition}>{condition}</li>)}
+                  </ul>
                   <small>중단 기준 · {opportunity.stopRule}</small>
                 </div>
               </article>
@@ -162,33 +200,38 @@ export function CreditStrategy({ portfolio }: { portfolio: PortfolioView }) {
         </div>
       </section>
 
+      <section className="strategy-section soft-section" id="rejected" aria-labelledby="rejected-title">
+        <div className="section-heading">
+          <p className="section-label">이번에 뺀 것</p>
+          <h2 id="rejected-title">그럴듯해도 클라우드 크레딧을 쓸 이유가 없으면 탈락</h2>
+          <p>기존 안의 OCR·요약·전사·무조건 GPU·검색 클러스터를 다시 검토한 결과입니다.</p>
+        </div>
+        <div className="rejected-list">
+          {portfolio.rejectedIdeas.map((item) => (
+            <article className="rejected-row" key={item.idea}>
+              <div className="rejected-icon" aria-hidden="true"><Ban size={18} /></div>
+              <div><h3>{item.idea}</h3><p>{item.reason}</p></div>
+              <small>대신 · {item.replacement}</small>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <section className="strategy-section decision-section" aria-labelledby="decision-title">
         <div className="section-heading compact-heading">
-          <p className="section-label">지금 상태</p>
-          <h2 id="decision-title">네이버는 실행 가능, 카카오는 키 발급이 먼저예요</h2>
+          <p className="section-label">현재 증거</p>
+          <h2 id="decision-title">저장은 실제로 확인했고, 외부 실행은 배포 단위까지 만들었어요</h2>
         </div>
-
         <div className="decision-grid">
           <div className="decision-column">
-            <h3>
-              <BadgeCheck size={19} aria-hidden="true" />
-              끝낸 확인
-            </h3>
-            <ul>
-              {portfolio.completedChecks.map((check) => (
-                <li key={check}>{check}</li>
-              ))}
-            </ul>
+            <h3><BadgeCheck size={19} aria-hidden="true" /> 확인된 것</h3>
+            <ul>{portfolio.completedChecks.map((check) => <li key={check}>{check}</li>)}</ul>
           </div>
           <div className="decision-column decision-column-warn">
-            <h3>
-              <TriangleAlert size={19} aria-hidden="true" />
-              돈 쓰기 전에 막을 것
-            </h3>
+            <h3><TriangleAlert size={19} aria-hidden="true" /> 다음 외부 설정</h3>
             <ul>
-              {portfolio.doNotSpendOn.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
+              {naver?.blockers.map((item) => <li key={item}>{item}</li>)}
+              {kakao?.blockers.slice(0, 2).map((item) => <li key={item}>{item}</li>)}
             </ul>
           </div>
         </div>

@@ -1,54 +1,30 @@
-# Service Candidates
+# Cloud-Native Service Candidates
 
-## Best use order
+## 통과한 서비스
 
-The shortest-expiry grant decides the first work. The goal is not to consume credits quickly. Every spend should leave a reusable dataset, evaluation report, or production-ready adapter.
+| Priority | Projects | Service | GPT가 대신 못 하는 결과 | First proof |
+| ---: | --- | --- | --- | --- |
+| 1 | 여러 공개 앱, `insane-search-testbed` | NCP Cloud Functions KR·SGN·JPN | PC와 분리된 24시간 리전별 네트워크 관측 | 3 URLs × 3 regions × 7 days |
+| 2 | R&D reports, release manifests | NCP Object Storage | PC 고장과 분리된 private 복구와 SHA-256 증명 | 10 uploads, 3 random restores |
+| 3 | `window-back-recorder` | NCP VOD Station + Global Edge | 관리형 다중 해상도·thumbnail·HLS·CDN | 3 non-sensitive videos |
+| 4 | `attendance`, uptime probes | NCP SENS | 통신사 SMS 전달과 실제 단말 수신 결과 | 3 approved messages |
 
-| Priority | Projects | Provider/service | First measurable result |
-| ---: | --- | --- | --- |
-| 1 | `nutrition-safety-engine`, `otc-nutrient-safety-engine` | NCP CLOVA OCR + Studio | Ingredient/amount/unit accuracy on 30 product-label images |
-| 2 | `company-work-capture`, TIPS documents | NCP OCR + Studio + Object Storage | Task/evidence/deadline extraction on 20 non-sensitive documents |
-| 3 | `wellnessbox-rnd` | KakaoCloud GPU + Object Storage | One fixed 480-case replay with identical frozen-eval metrics |
-| 4 | `insane-search-testbed` | KakaoCloud Advanced Managed Search | Recall and latency on 100 fixed Korean queries |
-| 5 | `window-back-recorder` | NCP CLOVA Speech | Searchable transcripts for three non-sensitive recordings |
-| 6 | `n8n-youtube-shorts-automation` | NCP Object Storage | Restore test for ten already-published MP4/metadata sets |
+Cloud Functions는 공식 문서상 한국·싱가포르·일본 리전과 Cron/Object Storage/API Gateway trigger를 지원합니다. VOD Station은 인코딩·thumbnail·HLS/DASH·CDN 연동을 제공합니다. SENS는 SMS·알림톡과 발송 결과 조회를 제공합니다.
 
-| Use case | Candidate services | Why it matters |
+## 지금은 보류한 KakaoCloud
+
+| Service | Unlock threshold | 현재 판단 |
 | --- | --- | --- |
-| Generated artifact storage | Object Storage, CDN | Useful across PDF, audio, image, and report workflows |
-| Document/OCR experiments | OCR, document AI | Directly reusable for scanned PDFs and course/research documents |
-| LLM extraction/summarization | CLOVA Studio or similar | Useful for note generation, research extraction, and summarization |
-| Batch jobs | Server/Container/Cloud Functions | Run credit-bounded experiments without keeping a local machine busy |
-| Small database | Managed DB or serverless DB | Track experiments, costs, provider metadata |
-| Dashboard later | Next.js on Vercel | Visualize credits and experiment results after data exists |
+| Advanced Managed Search | 운영 이벤트 100,000건 이상 + 로컬 검색 SLA 실패 | 데이터 규모 부족 |
+| GPU VM / Kubeflow | R&D training gate GO + 로컬 30분 이상 + 자동 삭제 | 현재 병목은 데이터·증거 |
+| Object Storage second copy | NCP 단일 장애가 사업 연속성 위험 + IAM/S3 keys | 중요도 근거 부족 |
 
-## NCP subscription order
+관리형이라는 사실만으로 가치가 생기지 않습니다. 클러스터 운영을 외부화할 만큼 데이터와 SLA가 커졌을 때만 엽니다.
 
-Subscribe only to services that have a bounded smoke test and cleanup path.
+## 탈락한 기존 후보
 
-| Priority | NCP service | Subscribe now? | First test |
-| --- | --- | --- | --- |
-| 1 | Object Storage | Done | Create one bucket/object, verify, delete |
-| 2 | CLOVA Studio | Yes, before 2026-07-31 | One Korean structured-extraction prompt with a 120-token cap |
-| 3 | OCR | Yes, before 2026-07-31 | Product-label benchmark with a fixed answer key |
-| 4 | Cloud Functions | Yes | Hello-world function, invoke once, delete |
-| 5 | Cloud DB / DB service | Not yet | Create/delete only after cost cap is written |
-| 6 | Server / VPC / Load Balancer | Not yet | Higher persistent cost risk |
-| 7 | Kubernetes / GPU / Data analytics | Not yet | Skip until there is a concrete workload |
-
-## Not first priority
-
-- Full production app architecture before the experiment shape is clear.
-- Complex multi-cloud abstraction before at least two providers are actively used.
-- GPU/server experiments unless there is a fixed dataset, baseline runtime, automatic shutdown, and cost cap.
-- Moving existing Vercel apps to VMs only to consume credits.
-- CLOVA Speech/Voice for the current n8n Shorts workflow. Its source of truth explicitly keeps static cards, BGM, and no TTS.
-
-## KakaoCloud gate
-
-Do not create a VM, Kubernetes cluster, or Kubeflow resource until all four are true:
-
-1. IAM access key and S3 credentials work.
-2. The workload runs locally with a fixed input and metrics.
-3. The resource has a maximum runtime and deletion command.
-4. The first run is capped at 500,000 KRW.
+- CLOVA OCR·Studio: 범용 GPT로 대체 가능
+- CLOVA Speech: 범용 음성 모델로 대체 가능하고 현재 병목 아님
+- `insane-search-testbed`용 벡터 검색: 프로젝트 정체를 잘못 해석한 안
+- `n8n-youtube-shorts-automation`용 VOD: YouTube가 이미 변환·배포
+- 상시 GPU·Kubernetes·Kafka: 현재 규모에서 운영 부채만 증가

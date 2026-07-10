@@ -2,49 +2,42 @@
   {
     "id": "naver-cloud-platform",
     "displayName": "Naver Cloud Platform",
-    "status": "ready",
+    "status": "cloud-native-pilots-ready",
     "credit": {
       "amount": 5300000,
       "currency": "KRW",
-      "expiresOn": "2027-04-30",
       "urgentAmount": 300000,
-      "urgentExpiresOn": "2026-07-31"
+      "urgentExpiresOn": "2026-07-31",
+      "longGrantExpiresOn": "2027-04-30",
+      "committedCap": 230000
     },
-    "envVars": [
-      "NCP_ACCESS_KEY_ID",
-      "NCP_SECRET_KEY",
-      "NCP_REGION",
-      "NCP_API_ENDPOINT"
+    "activeServices": [
+      "Cloud Functions in KR/SGN/JPN",
+      "Object Storage restore verification",
+      "VOD Station bounded pilot",
+      "SENS approved-message pilot"
     ],
-    "serviceCandidates": [
-      "Object Storage",
+    "rejectedGenericAiServices": [
       "CLOVA Studio",
-      "OCR / document AI",
-      "CDN",
-      "Cloud Functions or batch compute",
-      "Research document automation for TIPS/R&D work"
+      "CLOVA OCR",
+      "CLOVA Speech"
     ]
   },
   {
     "id": "kakao-cloud",
-    "displayName": "Kakao Cloud",
-    "status": "credentials-blocked",
+    "displayName": "KakaoCloud",
+    "status": "fully-parked",
     "credit": {
       "amount": 10000000,
       "currency": "KRW",
       "expiresOn": "2027-05-31",
-      "programAwardedAmount": 20000000
+      "programAwardedAmount": 20000000,
+      "committedCap": 0
     },
-    "envVars": [
-      "KAKAO_CLOUD_ACCESS_KEY_ID",
-      "KAKAO_CLOUD_SECRET_ACCESS_KEY",
-      "KAKAO_CLOUD_REGION"
-    ],
-    "serviceCandidates": [
-      "GPU Virtual Machine",
-      "Kubeflow",
-      "Object Storage",
-      "Advanced Managed Search"
+    "unlockCandidates": [
+      "Advanced Managed Search after 100,000 operational events",
+      "GPU after R&D readiness GO and measured local runtime bottleneck",
+      "Second-provider Object Storage after a documented continuity risk"
     ]
   }
 ]

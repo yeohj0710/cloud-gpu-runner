@@ -1,0 +1,10 @@
+{
+  "timeoutMs": 5000,
+  "targets": [
+    {
+      "id": "dashboard",
+      "url": "https://replace-with-public-health-endpoint.example/health",
+      "expectedStatus": 200
+    }
+  ]
+}

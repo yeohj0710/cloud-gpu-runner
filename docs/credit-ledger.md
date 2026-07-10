@@ -1,26 +1,27 @@
 # Credit Ledger
 
-Use this as the human-readable source of truth for credits.
+## 확정 발급액
 
-| Provider | Credit amount | Expiration | Status | Notes |
-| --- | ---: | --- | --- | --- |
-| Naver Cloud Platform | 300,000 KRW | 2026-07-31 | Issued | New customer credit. Use this first. |
-| Naver Cloud Platform | 5,000,000 KRW | 2027-04-30 | Issued | Greenhouse Track 1 first grant. Another 5,000,000 KRW can be requested. |
-| KakaoCloud | 10,000,000 KRW | 2027-05-31 | Issued | Confirmed by the 2026-05-28 issuance email. |
-| KakaoCloud Boost | 20,000,000 KRW program award | TBD | Awarded | The award email says 20,000,000 KRW. Only 10,000,000 KRW is confirmed as issued, so do not add both amounts. |
+| Provider | Credit | Expiration | Decision |
+| --- | ---: | --- | --- |
+| Naver Cloud Platform | 300,000 KRW | 2026-07-31 | Cloud-only pilots capped at 230,000 KRW |
+| Naver Cloud Platform | 5,000,000 KRW | 2027-04-30 | Fully parked until the urgent pilots prove value |
+| KakaoCloud | 10,000,000 KRW | 2027-05-31 | Fully parked until a measured scale bottleneck exists |
 
-Confirmed issued total as of 2026-07-10: **15,300,000 KRW**.
+Confirmed issued total: **15,300,000 KRW**. Committed cap: **230,000 KRW**. Parked: **15,070,000 KRW**.
 
-## What to do first
+KakaoCloud의 20,000,000원 프로그램 선정액과 10,000,000원 발급액을 따로 더하지 않습니다. 현재 확정 발급액은 10,000,000원입니다.
 
-1. Use the 300,000 KRW NCP grant before 2026-07-31 for measured OCR and HyperCLOVA X pilots.
-2. Turn the NCP Object Storage smoke test into a shared artifact path for `C:\dev` projects.
-3. Issue KakaoCloud IAM and S3 credentials before creating any GPU or Kubernetes resource.
-4. Ask the KakaoCloud program contact when the remaining 10,000,000 KRW of the Boost award is issued.
+## 지출 원칙
 
-## Update rules
+- GPT API와 현재 PC로 제공할 수 있는 결과면 클라우드 크레딧 대상에서 제외합니다.
+- 다중 리전 외부 실행, 오프사이트 복구, 통신사·CDN 전달, 측정된 대규모 컴퓨팅만 후보가 됩니다.
+- `free credit`은 지출 의무가 아닙니다. 실질 가치가 없으면 만료시키는 편이 운영 부채를 만드는 것보다 낫습니다.
+- 제공사·grant·만료일·발급 근거는 `apps/dashboard/src/data/credit-portfolio.json`이 기계 판독 SSOT입니다.
 
-- Update this file when a credit grant, expiration, or billing policy changes.
-- Do not write account secrets here.
-- If a service has separate free-tier limits, link or summarize them under provider docs.
-- Keep program awards separate from credits confirmed in the billing console or issuance email.
+## 추가 발급 가능성
+
+- NCP Greenhouse 추가 5,000,000원: 첫 파일럿의 가동률·복구시간·미디어 변환 결과를 근거로 신청
+- KakaoCloud 미발급 가능액 10,000,000원: 프로그램 담당자에게 지급 조건과 일정 확인
+
+가능성은 확정 원장에 합산하지 않습니다.
