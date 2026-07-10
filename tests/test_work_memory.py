@@ -9,6 +9,7 @@ from work_memory.config import DEFAULT_CONFIG
 from work_memory.db import Database
 from work_memory.gpu import create_job, validate_job
 from work_memory.ingest import ingest_manifest
+from work_memory.billing import add_usage, overview as billing_overview
 
 
 class WorkMemoryTest(unittest.TestCase):
@@ -62,7 +63,15 @@ class WorkMemoryTest(unittest.TestCase):
         with self.db.connect() as connection:
             self.assertEqual(connection.execute("SELECT count(*) FROM audit_log").fetchone()[0], 2)
 
+    def test_credit_ledger_separates_actual_and_estimated_usage(self):
+        add_usage(self.db, "naver", "Object Storage", 1200, "actual")
+        add_usage(self.db, "kakao", "A100 pilot", 50000, "estimated")
+        result = billing_overview(self.db)
+        self.assertEqual(result["totals"]["credit"], 15_300_000)
+        self.assertEqual(result["totals"]["actual"], 1200)
+        self.assertEqual(result["totals"]["estimated"], 50000)
+        self.assertEqual(result["totals"]["remaining"], 15_298_800)
+
 
 if __name__ == "__main__":
     unittest.main()
-

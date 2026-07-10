@@ -31,6 +31,14 @@ CREATE TABLE IF NOT EXISTS audit_log (
   action TEXT NOT NULL, target TEXT, detail_json TEXT NOT NULL DEFAULT '{}'
 );
 CREATE TABLE IF NOT EXISTS ingest_state (source_path TEXT PRIMARY KEY, byte_offset INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS credit_grants (
+  id TEXT PRIMARY KEY, provider TEXT NOT NULL, name TEXT NOT NULL, amount_krw INTEGER NOT NULL, expires_on TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS usage_entries (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, incurred_on TEXT NOT NULL, provider TEXT NOT NULL, service TEXT NOT NULL,
+  amount_krw INTEGER NOT NULL, kind TEXT NOT NULL, source TEXT NOT NULL, note TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS usage_entries_date ON usage_entries(incurred_on);
 CREATE VIRTUAL TABLE IF NOT EXISTS frame_search USING fts5(id UNINDEXED, app, title, ocr_text, content='frames', content_rowid='rowid');
 CREATE TRIGGER IF NOT EXISTS frames_ai AFTER INSERT ON frames BEGIN
   INSERT INTO frame_search(rowid,id,app,title,ocr_text) VALUES(new.rowid,new.id,new.app,new.title,new.ocr_text);
@@ -64,6 +72,8 @@ class Database:
     def initialize(self) -> None:
         with self.connect() as connection:
             connection.executescript(SCHEMA)
+        from .billing import seed_grants
+        seed_grants(self)
 
     def audit(self, actor: str, action: str, target: str = "", detail: dict[str, Any] | None = None) -> None:
         with self.connect() as connection:
@@ -101,4 +111,3 @@ class Database:
             else:
                 rows = connection.execute("SELECT * FROM frames ORDER BY captured_at DESC LIMIT ?", (limit,)).fetchall()
             return [dict(row) for row in rows]
-

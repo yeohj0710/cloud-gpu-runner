@@ -10,6 +10,7 @@ from .db import Database
 from .gpu import create_job, validate_job
 from .ingest import ingest_manifest
 from .server import serve
+from .billing import add_usage, overview as billing_overview
 
 
 def context(config_path: Path):
@@ -35,6 +36,13 @@ def main(argv: list[str] | None = None) -> int:
     gpu = sub.add_parser("gpu-job")
     gpu.add_argument("--limit", type=int, default=None)
     gpu.add_argument("--output", default="gpu/jobs/latest.json")
+    sub.add_parser("billing")
+    usage = sub.add_parser("add-usage")
+    usage.add_argument("provider", choices=["naver", "kakao"])
+    usage.add_argument("service")
+    usage.add_argument("amount_krw", type=int)
+    usage.add_argument("--kind", choices=["actual", "estimated", "adjustment"], default="actual")
+    usage.add_argument("--note", default="")
     args = parser.parse_args(argv)
     config_path = Path(args.config).resolve()
     root, config, db = context(config_path)
@@ -52,6 +60,10 @@ def main(argv: list[str] | None = None) -> int:
         job = create_job(db, resolve_path(args.output, root), config, args.limit)
         validate_job(job)
         print(json.dumps(job, ensure_ascii=False, indent=2))
+    elif args.command == "billing":
+        print(json.dumps(billing_overview(db), ensure_ascii=False, indent=2))
+    elif args.command == "add-usage":
+        print(json.dumps({"id": add_usage(db, args.provider, args.service, args.amount_krw, args.kind, args.note)}, ensure_ascii=False))
     elif args.command == "serve":
         webbrowser.open(f'http://{config["host"]}:{config["port"]}')
         serve(db, config, root)
@@ -60,4 +72,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

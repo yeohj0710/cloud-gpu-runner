@@ -10,6 +10,7 @@ from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse
 
 from .db import Database
+from .billing import add_usage, overview as billing_overview
 from .gpu import create_job
 from .ingest import ingest_manifest
 
@@ -58,6 +59,8 @@ class WorkMemoryHandler(BaseHTTPRequestHandler):
             return self._json({"ok": True, "version": "0.1.0"})
         if parsed.path == "/api/overview":
             return self._overview()
+        if parsed.path == "/api/billing":
+            return self._json(billing_overview(self.server.db))
         if parsed.path == "/api/search":
             query = parse_qs(parsed.query).get("q", [""])[0]
             self.server.db.audit("local-user", "search", query)
@@ -89,6 +92,9 @@ class WorkMemoryHandler(BaseHTTPRequestHandler):
                 job = create_job(self.server.db, output, self.server.config, body.get("limit"))
                 self.server.db.audit("local-user", "gpu.job.create", job["job_id"], {"input_count": job["input_count"]})
                 return self._json({"ok": True, "job": job, "path": str(output)})
+            if parsed.path == "/api/billing/usage":
+                entry_id = add_usage(self.server.db, str(body.get("provider", "")), str(body.get("service", "")), int(body.get("amount_krw", 0)), str(body.get("kind", "actual")), str(body.get("note", "")))
+                return self._json({"ok": True, "id": entry_id, "billing": billing_overview(self.server.db)})
             self._json({"error": "not_found"}, 404)
         except PermissionError as error:
             self._json({"ok": False, "error": str(error)}, 403)

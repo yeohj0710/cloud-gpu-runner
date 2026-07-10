@@ -13,6 +13,8 @@
 - 검색·상세보기·삭제·GPU 작업 생성 감사 로그
 - 카카오 A100 분석용 bounded dry-run 명세 생성
 - 반응형 로컬 웹 대시보드
+- 네이버·카카오 1,530만원 크레딧 원장, 공급자별 잔액과 만료 크레딧
+- 확정 청구액·예상 작업액·수동 조정을 분리한 사용 내역과 14일 추세
 
 ## 1분 실행
 
@@ -40,6 +42,8 @@ python -m work_memory consent agree
 python -m work_memory ingest
 python -m work_memory search "배포 오류"
 python -m work_memory gpu-job --limit 1000
+python -m work_memory billing
+python -m work_memory add-usage naver "Object Storage" 1200 --kind actual
 python -m work_memory serve
 ```
 
@@ -68,9 +72,15 @@ python -m work_memory serve
 
 기본 `gpu/worker.py`는 `mode=execute`와 `WORK_MEMORY_ALLOW_EXECUTE=YES`가 모두 없으면 실행을 거부합니다.
 
+## 크레딧 사용액 동기화
+
+현재 대시보드는 확정 지급된 15,300,000원을 자동 등록하고 수동 사용액·예상액·조정을 지원합니다. 네이버 자동 동기화는 공식 `getDemandCostList` Billing API를 연결하도록 데이터 구조가 준비돼 있습니다. 카카오 사용액은 계정용 Billing API 권한과 단가를 확인하기 전까지 임의 추정하지 않습니다.
+
+- NCP Cost and Usage API: https://api.ncloud-docs.com/docs/en/platform-costandusage
+- NCP getDemandCostList: https://api.ncloud-docs.com/docs/en/platform-costandusage-getdemandcostlist
+
 ## 테스트
 
 ```powershell
 .\scripts\run-tests.ps1
 ```
-

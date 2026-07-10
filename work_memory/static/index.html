@@ -4,8 +4,15 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#ffffff"><title>Work Memory</title>
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/credits.css">
+  <style>main section{scroll-margin-top:80px}</style>
 </head>
 <body>
+  <aside class="sidebar">
+    <a class="side-brand" href="#top"><span>W</span><strong>Work Memory</strong></a>
+    <nav><a class="active" href="#top">오늘</a><a href="#credits">크레딧</a><a href="#search">업무 검색</a><a href="#timeline">타임라인</a><a href="#gpu">GPU 작업</a><a href="#privacy">설정</a></nav>
+    <div class="side-footer"><small>LOCAL WORKSPACE</small><strong id="sideEmployee">내 PC</strong><span>데이터는 이 PC에 저장</span></div>
+  </aside>
   <header class="nav"><a class="brand" href="#top"><span>W</span> Work Memory</a><div id="recordingBadge" class="status">확인 중</div></header>
   <main id="top">
     <section class="hero">
@@ -13,6 +20,14 @@
       <h1>오늘 한 일을<br>다시 찾을 수 있게</h1>
       <p class="lead">화면을 감시 점수로 바꾸지 않습니다. 중요한 작업 장면을 검색하고, 업무일지와 장애 재현 자료로 정리합니다.</p>
       <div class="actions"><button id="syncButton" class="primary">지금 기록 가져오기</button><a class="secondary" href="#search">업무 검색</a></div>
+    </section>
+
+    <section id="credits" class="credit-section">
+      <div class="section-head credit-heading"><div><p class="label">Cloud credits</p><h2>남은 크레딧을 한눈에</h2><p>확정 청구액과 아직 청구되지 않은 예상액을 분리해 보여줍니다.</p></div><button id="usageToggle" class="secondary compact">사용액 기록</button></div>
+      <div class="credit-overview"><article class="balance-card"><span>전체 남은 크레딧</span><strong id="creditRemaining">-</strong><div class="credit-bar"><i id="creditBar"></i></div><small id="creditCaption">불러오는 중</small></article><article class="mini-stat"><span>확정 사용</span><strong id="actualUsage">-</strong><small>청구서·Billing API 기준</small></article><article class="mini-stat"><span>예상 사용</span><strong id="estimatedUsage">-</strong><small>실행 전 작업 견적</small></article></div>
+      <div id="usageForm" class="usage-form hidden"><select id="usageProvider"><option value="naver">네이버클라우드</option><option value="kakao">카카오클라우드</option></select><input id="usageService" placeholder="서비스 또는 작업 이름"><input id="usageAmount" type="number" min="0" placeholder="금액(원)"><select id="usageKind"><option value="actual">확정 사용액</option><option value="estimated">예상 사용액</option><option value="adjustment">크레딧 조정</option></select><button id="usageSave" class="primary">저장</button></div>
+      <div id="providerCards" class="provider-grid"></div>
+      <div class="usage-layout"><div><h3>최근 사용 내역</h3><div id="usageList" class="usage-list"></div></div><div><h3>14일 사용 추세</h3><div id="usageChart" class="usage-chart"></div></div></div>
     </section>
 
     <section class="metrics" aria-label="오늘 요약">
@@ -27,17 +42,17 @@
       <div id="searchResults" class="result-list"><div class="empty">검색어를 입력하거나 최근 기록을 불러오세요.</div></div>
     </section>
 
-    <section>
+    <section id="timeline">
       <div class="section-head"><p class="label">오늘의 업무 흐름</p><h2>어떤 도구에서 무엇을 했는지</h2><p>동일한 앱에서 이어진 장면을 하나의 세션으로 묶었습니다.</p></div>
       <div id="sessions" class="timeline"><div class="empty">기록을 가져오면 업무 흐름이 나타납니다.</div></div>
     </section>
 
-    <section class="band">
+    <section class="band" id="gpu">
       <div class="section-head"><p class="label">GPU 일괄 분석</p><h2>쌓인 화면은 카카오 A100에서 한 번에</h2><p>OCR·화면 의미 검색·민감정보 탐지만 수행하는 작업 명세를 만듭니다. 현재는 과금 없는 dry-run이며 최대 4시간 후 종료됩니다.</p></div>
       <div class="gpu-card"><div><strong>A100 배치 작업</strong><p id="gpuDetail">최대 5,000장 · 비공개 결과 · VM 자동삭제</p></div><button id="gpuButton" class="primary">작업 명세 만들기</button></div>
     </section>
 
-    <section>
+    <section id="privacy">
       <div class="section-head"><p class="label">기록 통제권</p><h2>작은 회사여도 지켜야 할 기본선</h2></div>
       <div class="privacy-grid">
         <article><strong>명시적 동의</strong><p>동의가 기록되지 않으면 매니페스트 수집이 차단됩니다.</p><button id="consentButton" class="secondary">동의 상태 변경</button></article>
@@ -51,4 +66,3 @@
   <script src="/app.js" defer></script>
 </body>
 </html>
-
