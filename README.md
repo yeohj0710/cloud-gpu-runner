@@ -1,5 +1,7 @@
 # Cloud Credit Lab
 
+> **저장소 역할:** 이 저장소는 크레딧 활용안의 조사·판정·실험 기록입니다. 실제 로그인, 비용 원장, Object Storage, GPU 실행과 Work Memory 전사를 제공하는 운영 콘솔은 [Cloud Credit Lab Console](https://work-memory-ten.vercel.app)이며 현재 소스는 [yeohj0710/work-memory](https://github.com/yeohj0710/work-memory)에 있습니다. `work-memory`라는 저장소·배포 slug는 기존 데이터와 인증 호환을 위한 레거시 식별자입니다.
+
 네이버·카카오 크레딧을 **GPT가 대신할 수 없는 클라우드 능력**에만 쓰기 위한 실험 저장소입니다.
 
 기준은 단순합니다.
@@ -25,7 +27,7 @@
 3. `window-back-recorder`의 비민감 샘플을 VOD Station에서 SD·HD·썸네일·HLS로 변환
 4. 사용자 승인 후 SENS 테스트 번호로 장애 문자 전달과 수신 결과 확인
 
-OCR, 요약, 전사, 범용 LLM 호출은 크레딧 계획에서 제거했습니다. `wellnessbox-rnd` GPU도 현재 병목이 컴퓨팅이 아니라 데이터·평가 근거이고 training gate가 `NO-GO`라 보류했습니다.
+아래 판정은 초기 조사 당시의 결정 기록입니다. 이후 운영 콘솔에서는 사용자가 승인한 **Work Memory 녹화·음성 전사**를 실제 카카오 GPU 활용 모듈로 추가했습니다. `wellnessbox-rnd` 학습 GPU와 범용 LLM 호출은 여전히 별도 근거가 생길 때까지 보류합니다.
 
 ## 빠른 시작
 
