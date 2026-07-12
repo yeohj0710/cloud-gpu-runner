@@ -1,107 +1,45 @@
 # Work Memory
 
-Protected Vercel production: https://work-memory-ten.vercel.app
+카카오클라우드와 네이버클라우드 크레딧을 실제 업무에 사용하는 비공개 제어 콘솔입니다.
 
-접속 비밀번호는 코드나 GitHub에 저장하지 않고 Vercel의 암호화된 `APP_PASSWORD` 환경변수로 관리합니다. 인증 성공 시 12시간 유효한 HttpOnly 세션 쿠키를 발급하며, 로그아웃하면 즉시 폐기합니다.
+- Production: https://work-memory-ten.vercel.app
+- Repository: https://github.com/yeohj0710/work-memory
+- 인증: 서버 검증 비밀번호 + 서명된 HttpOnly 세션 쿠키
+- 비밀키: Vercel 암호화 환경변수 및 로컬 `.env.local`에만 저장
 
-로그인 후 `연결` 영역에서 실제 KakaoCloud OpenAPI 기능을 사용할 수 있습니다.
+## 운영 기능
 
-- IAM 인증 및 프로젝트/리전 검증
-- 현재 BCS 인스턴스 목록 조회
-- 사용 가능한 GPU 인스턴스 사양 조회
-- 생성·삭제·과금 작업은 예산 상한과 추가 승인 구현 전까지 차단
+- 카카오 Object Storage: 버킷·파일 생성, 조회, 업로드, 다운로드, 삭제
+- 네이버 Object Storage: 버킷·파일 CRUD와 서명 URL 기반 대용량 직접 업로드
+- 네이버 Billing: 이번 달 실제 청구 내역 조회
+- 네이버 Server: 실제 서버 목록 조회
+- 카카오 GPU: 사양·이미지·서브넷·키페어 조회 및 확인 절차가 있는 인스턴스 생성·삭제
+- 녹화·음성 분석: 저장소 파일을 `faster-whisper large-v3` GPU 작업으로 전사하고 JSON 결과 저장
+- 작업 안전장치: 최대 실행시간, 실패/완료 콜백, 인스턴스 자동 삭제 요청, 부팅 디스크 동시 삭제
+- 팀 공용 비용 원장: 네이버 Object Storage에 영구 저장
 
-> Vercel 배포판은 민감정보가 없는 브라우저 크레딧 원장입니다. 실제 화면 기록, 클라우드 키, 공급자 API 호출과 GPU 실행은 로컬 에이전트 `http://127.0.0.1:8765`에서만 처리합니다.
+## 분석 사용 순서
 
-직원 화면 기록을 **감시 점수**가 아니라 검색 가능한 업무 기억, 업무일지, 장애 재현 자료로 바꾸는 로컬 우선 사내 도구입니다.
+1. `/ncp-storage`에서 버킷을 선택하고 녹화 또는 음성 파일을 업로드합니다.
+2. `/jobs`에서 해당 파일을 선택해 전사 작업을 등록합니다.
+3. 메인 화면의 GPU 실행에서 작업·GPU·이미지·네트워크를 선택합니다.
+4. 확인 문구 `GPU 생성에 동의합니다`를 입력하고 생성합니다.
+5. 작업이 끝나면 `/jobs`에서 JSON 결과를 내려받습니다.
 
-현재 완성된 범위:
+GPU 생성 시 즉시 과금됩니다. 작업 완료 또는 실패 콜백에서 인스턴스 삭제를 요청하지만, 공급자 장애에 대비해 실행 서버 목록도 확인해야 합니다.
 
-- `C:\dev\company-work-capture`의 JSONL 캡처 기록 증분 수집
-- 직원 동의 전 수집 차단 및 동의/철회 이력
-- 비밀번호 관리자·인증 창·설정된 민감 제목 자동 제외
-- SQLite FTS5 기반 앱/창 제목 검색
-- 연속 작업을 앱별 업무 세션으로 자동 묶기
-- 오늘 기록 수, 세션 수, 최초/최종 기록 시간 표시
-- 검색·상세보기·삭제·GPU 작업 생성 감사 로그
-- 카카오 A100 분석용 bounded dry-run 명세 생성
-- 반응형 로컬 웹 대시보드
-- 네이버·카카오 1,530만원 크레딧 원장, 공급자별 잔액과 만료 크레딧
-- 확정 청구액·예상 작업액·수동 조정을 분리한 사용 내역과 14일 추세
-
-## 1분 실행
-
-화면 수집기는 기존 도구를 사용합니다.
-
-```powershell
-cd C:\dev\company-work-capture
-.\Start-Capture.bat
-```
-
-Work Memory 실행:
+## 로컬 업무기억 도구
 
 ```powershell
 cd C:\dev\work-memory
 .\Start-WorkMemory.ps1
 ```
 
-브라우저에서 `http://127.0.0.1:8765`가 열립니다. 처음에는 화면 아래의 `수집에 동의`를 누른 후 `지금 기록 가져오기`를 누릅니다.
-
-Windows 로그인 시 자동으로 백그라운드 실행되게 설치:
-
-```powershell
-.\Install-WorkMemory.ps1
-```
-
-## CLI
-
-```powershell
-python -m work_memory init
-python -m work_memory consent agree
-python -m work_memory ingest
-python -m work_memory search "배포 오류"
-python -m work_memory gpu-job --limit 1000
-python -m work_memory billing
-python -m work_memory add-usage naver "Object Storage" 1200 --kind actual
-python -m work_memory kakao-status
-python -m work_memory kakao-token-test
-python -m work_memory serve
-```
-
-## 개인정보와 운영 원칙
-
-- 원본 화면은 기본적으로 직원 PC의 CompanyWorkCapture 데이터 폴더에만 있습니다.
-- 이 앱은 동의가 없거나 철회된 상태에서 새 기록을 읽지 않습니다.
-- `config.json`의 `excluded_apps`, `excluded_title_keywords`를 회사 환경에 맞게 늘리세요.
-- 기본 원본 보존기간 표시는 7일입니다. 실제 원본 삭제는 캡처 앱 또는 별도 Windows 예약 작업에 연결해야 합니다.
-- 기록 메타데이터 삭제는 대시보드에서 가능하며 원본 파일은 캡처 앱 보존정책을 따릅니다.
-- 근무 참고 구간은 최초/최종 캡처 시간일 뿐 출퇴근 확정이나 인사평가 점수가 아닙니다.
-- 소규모 회사의 전원 동의가 있더라도 목적, 열람자, 보존기간, 철회 방법은 사내 문서로 남기세요.
-
-## GPU 연결
-
-대시보드의 `작업 명세 만들기`는 `gpu/jobs/latest.json`만 생성하며 카카오 VM을 만들거나 비용을 발생시키지 않습니다.
-
-실제 연결 전 확인:
-
-1. 카카오클라우드 IAM 키, VPC, 서브넷, 키페어 준비
-2. A100 VM 이미지에서 OCR/비전 임베딩 모델 고정
-3. 입력 버킷과 결과 버킷을 private로 제한
-4. 작업 명세를 `execute`로 승격하는 별도 관리자 승인 추가
-5. 최대 240분 종료 타이머와 작업 완료 후 VM 삭제 자동화
-6. 샘플 100장으로 정확도·처리시간·실제 차감액 확인 후 확대
-
-기본 `gpu/worker.py`는 `mode=execute`와 `WORK_MEMORY_ALLOW_EXECUTE=YES`가 모두 없으면 실행을 거부합니다.
-
-## 크레딧 사용액 동기화
-
-현재 대시보드는 확정 지급된 15,300,000원을 자동 등록하고 수동 사용액·예상액·조정을 지원합니다. 네이버 자동 동기화는 공식 `getDemandCostList` Billing API를 연결하도록 데이터 구조가 준비돼 있습니다. 카카오 사용액은 계정용 Billing API 권한과 단가를 확인하기 전까지 임의 추정하지 않습니다.
-
-- NCP Cost and Usage API: https://api.ncloud-docs.com/docs/en/platform-costandusage
-- NCP getDemandCostList: https://api.ncloud-docs.com/docs/en/platform-costandusage-getdemandcostlist
+로컬 화면 기록 원본은 직원 PC 밖으로 자동 전송하지 않습니다. 동의·제외 앱·보존기간 정책은 `config.json`에서 관리합니다.
 
 ## 테스트
 
 ```powershell
 .\scripts\run-tests.ps1
+node --check api/cloud.js
 ```

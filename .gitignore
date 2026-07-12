@@ -10,3 +10,4 @@ gpu/jobs/
 output/
 
 .vercel
+.secrets/
