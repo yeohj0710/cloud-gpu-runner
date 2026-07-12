@@ -41,6 +41,8 @@ async function api(url, options = {}) {
   return d;
 }
 function translateError(code) {
+  if (/instance\.description|emoji|line breaks/i.test(String(code)))
+    return "카카오 인스턴스 설명 형식 오류가 발생했습니다. 새로고침 후 다시 시작해 주세요.";
   return (
     {
       input_required: "파일을 선택해 주세요.",

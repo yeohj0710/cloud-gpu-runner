@@ -3,6 +3,7 @@ import { bcs, cloud, token } from "../lib/kakao-cloud.js";
 import { jobToken, listJobs, updateJob } from "../lib/jobs.js";
 import { presignObject } from "../lib/ncp-storage.js";
 import { KAKAO_GPU_HOURLY } from "../lib/usage.js";
+import { safeInstanceDescription } from "../lib/cloud-metadata.js";
 
 function workerScript(job) {
   const input = presignObject(job.bucket, job.key, "GET", 21600),
@@ -115,7 +116,9 @@ export default async function handler(request, response) {
             name: `ccl-${Date.now()}-${String(v.purpose || "job")
               .replace(/[^a-z0-9-]/gi, "-")
               .slice(0, 20)}`,
-            description: `Cloud Credit Lab · Work Memory ${v.purpose || "GPU job"}; max ${maxMinutes} minutes`,
+            description: safeInstanceDescription(
+              `Cloud Credit Lab Work Memory ${v.purpose || "GPU job"}; max ${maxMinutes} minutes`,
+            ),
             count: 1,
             image_id: v.image_id,
             flavor_id: v.flavor_id,
