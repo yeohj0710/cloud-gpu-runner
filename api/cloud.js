@@ -35,10 +35,10 @@ set -Eeuo pipefail
 CALLBACK='${callback}'
 LOG_URL='${log}'
 exec > >(tee /var/log/ccl-worker.log) 2>&1
-finish(){ trap - ERR; status="$1"; error="\${2:-}"; if [ -d "/workspace/${outputPath}" ] && [ -n "$(find "/workspace/${outputPath}" -mindepth 1 -print -quit)" ]; then tar -czf /tmp/result.tar.gz -C /workspace "${outputPath}"; else printf '{"status":"%s","message":"output directory is empty"}\n' "$status" >/tmp/result-status.json; tar -czf /tmp/result.tar.gz -C /tmp result-status.json; fi; curl -fsS -X PUT -H 'content-type: application/gzip' --upload-file /tmp/result.tar.gz '${output}' || true; curl -fsS -X PUT -H 'content-type: text/plain' --upload-file /var/log/ccl-worker.log "$LOG_URL" || true; curl -fsS -X POST -H 'content-type: application/json' -d "{\"status\":\"$status\",\"error\":\"$error\"}" "$CALLBACK" || true; shutdown -h now || true; }
+finish(){ trap - ERR; status="$1"; error="\${2:-}"; if [ -d "/workspace/${outputPath}" ] && [ -n "$(find "/workspace/${outputPath}" -mindepth 1 -print -quit)" ]; then tar -czf /tmp/result.tar.gz -C /workspace "${outputPath}"; else printf '{"status":"%s","message":"output directory is empty"}\n' "$status" >/tmp/result-status.json; tar -czf /tmp/result.tar.gz -C /tmp result-status.json; fi; curl -fsS -X PUT -H 'content-type: application/gzip' --upload-file /tmp/result.tar.gz '${output}' || true; curl -fsS -X PUT -H 'content-type: text/plain' --upload-file /var/log/ccl-worker.log "$LOG_URL" || true; printf '{"status":"%s","error":"%s"}' "$status" "$error" | curl -fsS -X POST -H 'content-type: application/json' --data-binary @- "$CALLBACK" || true; shutdown -h now || true; }
 fail(){ code=$?; if [ "$code" = 124 ]; then finish failed "execution timeout"; else finish failed "worker failed (exit $code)"; fi; }
 trap fail ERR
-progress(){ curl -fsS --connect-timeout 15 --max-time 30 -X POST -H 'content-type: application/json' -d "{\"status\":\"running\",\"stage\":\"$1\"}" "$CALLBACK"; }
+progress(){ printf '{"status":"running","stage":"%s"}' "$1" | curl -fsS --connect-timeout 15 --max-time 30 -X POST -H 'content-type: application/json' --data-binary @- "$CALLBACK"; }
 online=0
 for attempt in $(seq 1 150); do
   if progress bootstrap; then online=1; break; fi
