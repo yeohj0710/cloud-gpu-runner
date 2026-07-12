@@ -73,8 +73,6 @@ export default async function handler(request, response) {
     }
     if (request.method === "POST" && action === "create") {
       const v = request.body || {};
-      if (v.confirm !== "GPU 생성에 동의합니다")
-        return response.status(400).json({ error: "confirmation_required" });
       if (!v.job_id)
         return response.status(400).json({ error: "analysis_job_required" });
       if (

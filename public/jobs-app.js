@@ -46,7 +46,6 @@ function translateError(code) {
       input_required: "파일을 선택해 주세요.",
       input_not_found:
         "선택한 파일을 찾지 못했습니다. 목록을 새로고침해 주세요.",
-      confirmation_required: "확인 문구를 정확히 입력해 주세요.",
       missing_configuration: "GPU 실행 환경이 아직 준비되지 않았습니다.",
       job_not_found: "작업을 찾지 못했습니다.",
       cancel_running_job_first: "실행 중인 작업은 먼저 취소해 주세요.",
@@ -395,7 +394,6 @@ function openRun(id) {
     ? "카카오 네트워크가 아직 생성 중입니다. 작업은 안전하게 대기 상태로 보관됩니다."
     : "NVIDIA 드라이버가 포함된 Ubuntu 이미지가 없어 GPU 분석을 시작할 수 없습니다.";
   $("#runSettings").classList.toggle("hidden", !ready);
-  $("#confirmText").value = "";
   $("#startGpu").disabled = !ready;
   if (ready) {
     const sorted = [...readiness.flavors].sort(
@@ -437,8 +435,6 @@ function updateRunEstimate() {
   box.innerHTML = `<span>최대 예상 비용 · VAT 별도</span><b>${money(total)}</b><small>GPU ${money(gpuHourly * hours)} + ${volume}GB 디스크 ${money(diskHourly * hours)} · 실제 사용시간이 짧으면 감소</small>`;
 }
 async function startGpu() {
-  if ($("#confirmText").value !== "GPU 생성에 동의합니다")
-    return alert("확인 문구 ‘GPU 생성에 동의합니다’를 정확히 입력해 주세요.");
   const subnet = readiness.subnets.find(
       (x) => (x.provisioning_status || x.status) === "ACTIVE",
     ),
@@ -460,7 +456,6 @@ async function startGpu() {
         key_name: key.name,
         max_minutes: Number($("#maxMinutes").value),
         volume_gb: Number($("#volumeGb").value),
-        confirm: $("#confirmText").value,
       }),
     });
     $("#runDialog").close();

@@ -215,14 +215,6 @@ $("#gpuLauncher").onsubmit = async (event) => {
     return alert(
       "분석할 작업을 선택해 주세요. 파일 없는 GPU는 생성할 수 없습니다.",
     );
-  if ($("#createConfirm").value !== "GPU 생성에 동의합니다")
-    return alert("확인 문구 ‘GPU 생성에 동의합니다’를 정확히 입력해 주세요.");
-  if (
-    !confirm(
-      "표시된 최대 예상비용을 확인했나요? 실제 GPU가 생성되며 즉시 과금됩니다.",
-    )
-  )
-    return;
   const body = {
     purpose: "whisper-transcription",
     job_id: $("#job").value,
@@ -233,7 +225,6 @@ $("#gpuLauncher").onsubmit = async (event) => {
     key_name: $("#keypair").value,
     max_minutes: Number($("#maxMinutes").value),
     volume_gb: Number($("#volumeGb").value),
-    confirm: $("#createConfirm").value,
   };
   $("#gpuOutput").textContent = "GPU 인스턴스 생성 요청 중…";
   try {
