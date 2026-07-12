@@ -85,6 +85,12 @@ export default async function handler(request, response) {
         total: data.pagination?.total || 0,
       });
     }
+    if (request.method === "GET" && action === "console-log") {
+      const id = String(request.query?.id || "");
+      if (!id) return response.status(400).json({ error: "instance_id_required" });
+      const data = await bcs(`instances/${encodeURIComponent(id)}/console-log`);
+      return response.status(200).json({ ok: true, instance_id: id, data });
+    }
     if (request.method === "GET" && action === "gpu-flavors") {
       const data = await bcs("flavors?instance_type=gpu&limit=100");
       return response.status(200).json({ ok: true, items: data.flavors || [] });
