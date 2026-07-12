@@ -25,6 +25,7 @@ for (const expected of ["timeout 60m", "CCL_DATA_DIR", "CCL_DATA_FILE", "shutdow
   assert.ok(script.includes(expected), `worker script missing ${expected}`);
 }
 assert.ok(!script.includes("tar -czf /tmp/result.tar.gz -C /workspace ."), "worker must never archive the entire workspace as fallback");
+assert.ok(!script.includes("apt-get"), "worker bootstrap must not reinstall the operating system package set for every job");
 assert.ok(Buffer.byteLength(script, "utf8") < 16 * 1024, "cloud-init must stay below Kakao's 16KB user_data limit");
 const estimate = estimateGpu("gn1i.xlarge", 60, 80);
 assert.equal(estimate.gpu, 648);

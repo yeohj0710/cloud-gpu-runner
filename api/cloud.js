@@ -38,12 +38,11 @@ exec > >(tee /var/log/ccl-worker.log) 2>&1
 finish(){ trap - ERR; status="$1"; error="\${2:-}"; if [ -d "/workspace/${outputPath}" ] && [ -n "$(find "/workspace/${outputPath}" -mindepth 1 -print -quit)" ]; then tar -czf /tmp/result.tar.gz -C /workspace "${outputPath}"; else printf '{"status":"%s","message":"output directory is empty"}\n' "$status" >/tmp/result-status.json; tar -czf /tmp/result.tar.gz -C /tmp result-status.json; fi; curl -fsS -X PUT -H 'content-type: application/gzip' --upload-file /tmp/result.tar.gz '${output}' || true; curl -fsS -X PUT -H 'content-type: text/plain' --upload-file /var/log/ccl-worker.log "$LOG_URL" || true; curl -fsS -X POST -H 'content-type: application/json' -d "{\"status\":\"$status\",\"error\":\"$error\"}" "$CALLBACK" || true; shutdown -h now || true; }
 fail(){ code=$?; if [ "$code" = 124 ]; then finish failed "execution timeout"; else finish failed "worker failed (exit $code)"; fi; }
 trap fail ERR
-curl -fsS -X POST -H 'content-type: application/json' -d '{"status":"running"}' "$CALLBACK"
-apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y curl unzip tar python3 python3-pip python3-venv git
+curl -fsS --connect-timeout 15 --max-time 30 -X POST -H 'content-type: application/json' -d '{"status":"running"}' "$CALLBACK"
 mkdir -p /workspace /workspace/input /workspace/${outputPath}
-curl -fL '${code}' -o /tmp/code.${archive === "zip" ? "zip" : "tar.gz"}
-${archive === "zip" ? "unzip -q /tmp/code.zip -d /workspace" : "tar -xzf /tmp/code.tar.gz -C /workspace"}
-${data ? `curl -fL '${data}' -o '/workspace/input/${String(job.data_key).split("/").pop().replace(/'/g, "")}'` : "true"}
+curl -fL --connect-timeout 15 --max-time 600 '${code}' -o /tmp/code.${archive === "zip" ? "zip" : "tar.gz"}
+${archive === "zip" ? "python3 -m zipfile -e /tmp/code.zip /workspace" : "tar -xzf /tmp/code.tar.gz -C /workspace"}
+${data ? `curl -fL --connect-timeout 15 --max-time 3600 '${data}' -o '/workspace/input/${String(job.data_key).split("/").pop().replace(/'/g, "")}'` : "true"}
 export CCL_DATA_DIR=/workspace/input CCL_DATA_FILE='${data ? `/workspace/input/${String(job.data_key).split("/").pop().replace(/'/g, "")}` : ""}' CCL_OUTPUT_DIR=/workspace/${outputPath} CCL_JOB_ID='${job.id}'
 WORKDIR=/workspace
 mapfile -t roots < <(find /workspace -mindepth 1 -maxdepth 1 -type d ! -name input ! -name '${outputRoot}')
