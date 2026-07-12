@@ -75,6 +75,8 @@ export default async function handler(request, response) {
       const v = request.body || {};
       if (v.confirm !== "GPU 생성에 동의합니다")
         return response.status(400).json({ error: "confirmation_required" });
+      if (!v.job_id)
+        return response.status(400).json({ error: "analysis_job_required" });
       if (
         !v.flavor_id ||
         !v.image_id ||
@@ -83,11 +85,10 @@ export default async function handler(request, response) {
         !v.security_group
       )
         return response.status(400).json({ error: "missing_configuration" });
-      const job = v.job_id
-        ? (await listJobs()).find((item) => item.id === v.job_id)
-        : null;
-      if (v.job_id && !job)
-        return response.status(404).json({ error: "job_not_found" });
+      const job = (await listJobs()).find((item) => item.id === v.job_id);
+      if (!job) return response.status(404).json({ error: "job_not_found" });
+      if (job.status !== "queued")
+        return response.status(409).json({ error: "job_not_queued" });
       if (job) {
         const images = await cloud(
             "image",

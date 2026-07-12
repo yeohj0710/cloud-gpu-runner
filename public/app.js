@@ -14,7 +14,7 @@ async function json(url, options) {
   return data;
 }
 const won = (value) =>
-  `${Number(value || 0).toLocaleString("ko-KR", { maximumFractionDigits: 2 })}원`;
+  `${Number(value || 0).toLocaleString("ko-KR", { maximumFractionDigits: Number(value) < 1 ? 4 : 2 })}원`;
 async function loadUsage() {
   try {
     const u = await json("/api/usage"),
@@ -114,6 +114,23 @@ $("#listGpu").onclick = () =>
   document.querySelector('[data-overview="kakao"]').click();
 const option = (value, label) =>
   `<option value="${safe(value)}">${safe(label)}</option>`;
+let gpuReadiness = null;
+function updateMainGpuEstimate() {
+  if (!gpuReadiness || !$("#flavor").value) return;
+  const flavor = gpuReadiness.flavors.find((x) => x.id === $("#flavor").value);
+  const hourly = Number(gpuReadiness.pricing?.gpu_hourly?.[flavor?.name] || 0);
+  const minutes = Math.max(15, Number($("#maxMinutes").value) || 60);
+  const volume = Math.max(50, Number($("#volumeGb").value) || 80);
+  const gpu = (hourly * minutes) / 60;
+  const disk =
+    (volume *
+      Number(gpuReadiness.pricing?.block_storage_gib_hour || 0.16) *
+      minutes) /
+    60;
+  const requests = 0.0049;
+  $("#mainGpuEstimate").innerHTML =
+    `<b>최대 예상비용 ${won(gpu + disk + requests)} · VAT 별도</b><small>GPU ${won(gpu)} + 부팅 디스크 ${won(disk)} + 입력 다운로드·결과 저장 요청 약 ${won(requests)}</small><small>실제 비용은 작업이 빨리 끝나 자동 삭제되면 이보다 적을 수 있어요.</small>`;
+}
 $("#prepareGpu").onclick = async (event) => {
   event.target.disabled = true;
   $("#gpuOutput").textContent = "GPU 실행에 필요한 리소스를 확인 중…";
@@ -122,19 +139,35 @@ $("#prepareGpu").onclick = async (event) => {
       json("/api/cloud?action=readiness"),
       json("/api/jobs"),
     ]);
+    gpuReadiness = data;
     const activeSubnets = data.subnets.filter(
       (x) => (x.provisioning_status || x.status || "ACTIVE") === "ACTIVE",
     );
-    $("#flavor").innerHTML = data.flavors
+    const compatibleFlavors = data.flavors
+      .filter(
+        (x) =>
+          /nvidia/i.test(x.manufacturer || "") &&
+          data.pricing?.gpu_hourly?.[x.name],
+      )
+      .sort(
+        (a, b) =>
+          data.pricing.gpu_hourly[a.name] - data.pricing.gpu_hourly[b.name],
+      );
+    $("#flavor").innerHTML = compatibleFlavors
       .map((x) =>
         option(
           x.id,
-          `${x.name} · ${x.vcpus || 0} vCPU · ${Math.round((x.memory_mb || 0) / 1024)} GiB`,
+          `${x.name} · NVIDIA ${String(x.hw_name || "GPU").toUpperCase()} · ${won(data.pricing.gpu_hourly[x.name])}/시간`,
         ),
       )
       .join("");
     $("#image").innerHTML = data.images
-      .filter((x) => /ubuntu/i.test(x.name || ""))
+      .filter(
+        (x) => /ubuntu/i.test(x.name || "") && /nvidia/i.test(x.name || ""),
+      )
+      .sort(
+        (a, b) => Number(/22\.04/.test(b.name)) - Number(/22\.04/.test(a.name)),
+      )
       .map((x) => option(x.id, x.name))
       .join("");
     $("#subnet").innerHTML = activeSubnets
@@ -146,21 +179,30 @@ $("#prepareGpu").onclick = async (event) => {
     $("#keypair").innerHTML = data.keypairs
       .map((x) => option(x.name, x.name))
       .join("");
+    const queuedJobs = jobs.items.filter((x) => x.status === "queued");
     $("#job").innerHTML =
-      '<option value="">작업 없이 GPU만 생성</option>' +
-      jobs.items
-        .filter((x) => x.status === "queued" || x.status === "failed")
-        .map((x) => option(x.id, `${x.key} · ${x.status}`))
-        .join("");
+      '<option value="">실행 대기 작업을 선택하세요</option>' +
+      queuedJobs.map((x) => option(x.id, `${x.key} · ${x.status}`)).join("");
     const missing = [];
     if (!activeSubnets.length) missing.push("활성 서브넷");
     if (!data.security_groups.length) missing.push("보안 그룹");
     if (!data.keypairs.length) missing.push("SSH 키페어");
-    if (!data.flavors.length) missing.push("GPU 사양");
+    if (!compatibleFlavors.length) missing.push("지원되는 NVIDIA GPU");
+    if (!$("#image").options.length) missing.push("NVIDIA Ubuntu 이미지");
+    $("#noGpuJob").classList.toggle(
+      "hidden",
+      queuedJobs.length > 0 || missing.length > 0,
+    );
     $("#gpuOutput").textContent = missing.length
       ? `아직 준비 중이거나 없는 항목: ${missing.join(", ")}`
-      : `실행 준비 완료 · GPU ${data.flavors.length}종 · 활성 서브넷 ${activeSubnets.length}개 · 작업 ${jobs.items.length}개`;
-    $("#gpuLauncher").classList.toggle("hidden", missing.length > 0);
+      : queuedJobs.length
+        ? `실행할 작업 ${queuedJobs.length}개를 찾았습니다. 작업과 최대 실행시간을 확인하세요.`
+        : "클라우드 연결은 정상입니다. 하지만 실행 대기 작업이 없어 GPU를 만들지 않았습니다.";
+    $("#gpuLauncher").classList.toggle(
+      "hidden",
+      missing.length > 0 || queuedJobs.length === 0,
+    );
+    updateMainGpuEstimate();
   } catch (error) {
     $("#gpuOutput").textContent = `준비 확인 실패: ${error.message}`;
   } finally {
@@ -169,10 +211,20 @@ $("#prepareGpu").onclick = async (event) => {
 };
 $("#gpuLauncher").onsubmit = async (event) => {
   event.preventDefault();
-  if (!confirm("실제 GPU 인스턴스를 생성하며 즉시 과금됩니다. 계속할까요?"))
+  if (!$("#job").value)
+    return alert(
+      "분석할 작업을 선택해 주세요. 파일 없는 GPU는 생성할 수 없습니다.",
+    );
+  if ($("#createConfirm").value !== "GPU 생성에 동의합니다")
+    return alert("확인 문구 ‘GPU 생성에 동의합니다’를 정확히 입력해 주세요.");
+  if (
+    !confirm(
+      "표시된 최대 예상비용을 확인했나요? 실제 GPU가 생성되며 즉시 과금됩니다.",
+    )
+  )
     return;
   const body = {
-    purpose: $("#job").value ? "whisper-transcription" : "gpu-shell",
+    purpose: "whisper-transcription",
     job_id: $("#job").value,
     flavor_id: $("#flavor").value,
     image_id: $("#image").value,
@@ -196,6 +248,9 @@ $("#gpuLauncher").onsubmit = async (event) => {
     $("#gpuOutput").textContent = `생성 실패: ${error.message}`;
   }
 };
+[$("#job"), $("#flavor"), $("#maxMinutes"), $("#volumeGb")].forEach((element) =>
+  element.addEventListener("change", updateMainGpuEstimate),
+);
 let entries = [];
 function renderLedger() {
   $("#entries").innerHTML = entries.length
