@@ -38,11 +38,15 @@ exec > >(tee /var/log/ccl-worker.log) 2>&1
 finish(){ trap - ERR; status="$1"; error="\${2:-}"; if [ -d "/workspace/${outputPath}" ] && [ -n "$(find "/workspace/${outputPath}" -mindepth 1 -print -quit)" ]; then tar -czf /tmp/result.tar.gz -C /workspace "${outputPath}"; else printf '{"status":"%s","message":"output directory is empty"}\n' "$status" >/tmp/result-status.json; tar -czf /tmp/result.tar.gz -C /tmp result-status.json; fi; curl -fsS -X PUT -H 'content-type: application/gzip' --upload-file /tmp/result.tar.gz '${output}' || true; curl -fsS -X PUT -H 'content-type: text/plain' --upload-file /var/log/ccl-worker.log "$LOG_URL" || true; curl -fsS -X POST -H 'content-type: application/json' -d "{\"status\":\"$status\",\"error\":\"$error\"}" "$CALLBACK" || true; shutdown -h now || true; }
 fail(){ code=$?; if [ "$code" = 124 ]; then finish failed "execution timeout"; else finish failed "worker failed (exit $code)"; fi; }
 trap fail ERR
-curl -fsS --connect-timeout 15 --max-time 30 -X POST -H 'content-type: application/json' -d '{"status":"running"}' "$CALLBACK"
+progress(){ curl -fsS --connect-timeout 15 --max-time 30 -X POST -H 'content-type: application/json' -d "{\"status\":\"running\",\"stage\":\"$1\"}" "$CALLBACK"; }
+progress bootstrap
 mkdir -p /workspace /workspace/input /workspace/${outputPath}
+progress code_download
 curl -fL --connect-timeout 15 --max-time 600 '${code}' -o /tmp/code.${archive === "zip" ? "zip" : "tar.gz"}
+progress code_extract
 ${archive === "zip" ? "python3 -m zipfile -e /tmp/code.zip /workspace" : "tar -xzf /tmp/code.tar.gz -C /workspace"}
-${data ? `curl -fL --connect-timeout 15 --max-time 3600 '${data}' -o '/workspace/input/${String(job.data_key).split("/").pop().replace(/'/g, "")}'` : "true"}
+${data ? `progress data_download
+curl -fL --connect-timeout 15 --max-time 3600 '${data}' -o '/workspace/input/${String(job.data_key).split("/").pop().replace(/'/g, "")}'` : "true"}
 export CCL_DATA_DIR=/workspace/input CCL_DATA_FILE='${data ? `/workspace/input/${String(job.data_key).split("/").pop().replace(/'/g, "")}` : ""}' CCL_OUTPUT_DIR=/workspace/${outputPath} CCL_JOB_ID='${job.id}'
 WORKDIR=/workspace
 mapfile -t roots < <(find /workspace -mindepth 1 -maxdepth 1 -type d ! -name input ! -name '${outputRoot}')
@@ -50,6 +54,7 @@ files=$(find /workspace -mindepth 1 -maxdepth 1 -type f | wc -l)
 if [ "\${#roots[@]}" = 1 ] && [ "$files" = 0 ]; then WORKDIR="\${roots[0]}"; fi
 cd "$WORKDIR"
 COMMAND=$(printf '%s' '${command64}' | base64 -d)
+progress command
 timeout ${Math.min(1440, Math.max(15, Number(job.max_minutes) || 60))}m bash -lc "$COMMAND"
 trap - ERR
 finish completed ""

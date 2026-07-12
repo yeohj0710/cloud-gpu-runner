@@ -34,7 +34,7 @@ export default async function handler(request, response) {
   if (request.method !== "POST" || !validJobToken(id, token)) return response.status(401).json({ error: "unauthorized" });
   try {
     const status = ["running", "completed", "failed"].includes(request.body?.status) ? request.body.status : "failed";
-    let job = await updateJob(id, { status, error: String(request.body?.error || "").slice(0, 500) || undefined, completed_at: status === "completed" ? new Date().toISOString() : undefined });
+    let job = await updateJob(id, { status, stage: String(request.body?.stage || "").slice(0, 80) || undefined, error: String(request.body?.error || "").slice(0, 500) || undefined, completed_at: status === "completed" ? new Date().toISOString() : undefined });
     if (terminal(status) && !job.usage_recorded_at) {
       try { job = await recordTerminalUsage(job, status); }
       catch (error) { job = await updateJob(id, { usage_error: String(error.message).slice(0, 300) }); }
