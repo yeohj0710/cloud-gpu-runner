@@ -200,9 +200,13 @@ export default async function handler(request, response) {
         try {
           let activeInstance;
           for (let attempt = 0; attempt < 30; attempt += 1) {
-            const details = await bcs(`instances/${encodeURIComponent(instanceId)}`);
-            const candidate = details.instance || details;
-            if (candidate.status === "active" && !candidate.task_state) { activeInstance = candidate; break; }
+            try {
+              const details = await bcs("instances?limit=100");
+              const candidate = details.instances?.find((item) => item.id === instanceId);
+              if (candidate?.status === "active" && !candidate.task_state) { activeInstance = candidate; break; }
+            } catch (error) {
+              if (!/404|409/.test(String(error.message))) throw error;
+            }
             await wait(1500);
           }
           if (!activeInstance) throw new Error("instance_activation_timeout");

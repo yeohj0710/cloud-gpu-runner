@@ -15,12 +15,14 @@ async function recordTerminalUsage(job, status) {
   job = await updateJob(job.id, { usage_amount: amount, usage_gpu_amount: gpu, usage_disk_amount: disk, usage_public_ip_amount: publicIp, usage_seconds: seconds, usage_recorded_at: new Date().toISOString() });
   try {
     const objects = await listObjects(job.bucket);
+    let artifactCount = 0;
     for (const key of [job.result_key, job.log_key]) {
       const object = objects.find((item) => item.key === key);
-      if (object) await startStorage("naver", job.bucket, key, object.size);
+      if (object) { await startStorage("naver", job.bucket, key, object.size); artifactCount += 1; }
     }
     const inputGets = job.data_key ? 2 : 1;
     await addUsage({ provider: "naver", category: "storage_request", action: "gpu-input-download", label: job.key, amount: inputGets * STORAGE.naver.get, meta: { job_id: job.id, requests: inputGets } });
+    if (artifactCount === 2) job = await updateJob(job.id, { artifacts_ready: true });
   } catch (error) {
     job = await updateJob(job.id, { storage_usage_error: String(error.message).slice(0, 300) });
   }
