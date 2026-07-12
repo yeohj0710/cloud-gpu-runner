@@ -21,7 +21,7 @@ const script = customWorkerScript({
   id: "job-1", bucket: "bucket", ...input,
   result_key: "results/a.tar.gz", log_key: "logs/a.txt", max_minutes: 60,
 });
-for (const expected of ["timeout 60m", "CCL_DATA_DIR", "CCL_DATA_FILE", "shutdown -h now", "finish completed", "output directory is empty", "trap - ERR", "WORKDIR=/workspace", "execution timeout", "progress code_download", "progress command"]) {
+for (const expected of ["timeout 60m", "CCL_DATA_DIR", "CCL_DATA_FILE", "shutdown -h now", "finish completed", "output directory is empty", "trap - ERR", "WORKDIR=/workspace", "execution timeout", "progress code_download", "progress command", "network activation timeout", "seq 1 150"]) {
   assert.ok(script.includes(expected), `worker script missing ${expected}`);
 }
 assert.ok(!script.includes("tar -czf /tmp/result.tar.gz -C /workspace ."), "worker must never archive the entire workspace as fallback");

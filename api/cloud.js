@@ -39,7 +39,12 @@ finish(){ trap - ERR; status="$1"; error="\${2:-}"; if [ -d "/workspace/${output
 fail(){ code=$?; if [ "$code" = 124 ]; then finish failed "execution timeout"; else finish failed "worker failed (exit $code)"; fi; }
 trap fail ERR
 progress(){ curl -fsS --connect-timeout 15 --max-time 30 -X POST -H 'content-type: application/json' -d "{\"status\":\"running\",\"stage\":\"$1\"}" "$CALLBACK"; }
-progress bootstrap
+online=0
+for attempt in $(seq 1 150); do
+  if progress bootstrap; then online=1; break; fi
+  sleep 2
+done
+if [ "$online" != 1 ]; then finish failed "network activation timeout"; exit 70; fi
 mkdir -p /workspace /workspace/input /workspace/${outputPath}
 progress code_download
 curl -fL --connect-timeout 15 --max-time 600 '${code}' -o /tmp/code.${archive === "zip" ? "zip" : "tar.gz"}
