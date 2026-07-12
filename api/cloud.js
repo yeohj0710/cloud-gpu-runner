@@ -7,7 +7,7 @@ import { safeInstanceDescription } from "../lib/cloud-metadata.js";
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-function workerScript(job) {
+function workerScript(job, baseUrl) {
   const input = presignObject(job.bucket, job.key, "GET", 21600),
     output = presignObject(job.bucket, job.result_key, "PUT", 21600),
     log = presignObject(
@@ -16,16 +16,16 @@ function workerScript(job) {
       "PUT",
       21600,
     ),
-    callback = `${process.env.PUBLIC_BASE_URL || "https://cloud-credit-lab-console.vercel.app"}/api/worker-callback?id=${encodeURIComponent(job.id)}&token=${jobToken(job.id)}`;
+    callback = `${baseUrl}/api/worker-callback?id=${encodeURIComponent(job.id)}&token=${jobToken(job.id)}`;
   return `#!/bin/bash\nset -euo pipefail\nCALLBACK='${callback}'\nLOG_URL='${log}'\nSTAGE='bootstrap'\nfail(){ code=$?; curl -fsS -X PUT -H 'content-type: text/plain' --upload-file /var/log/cloud-init-output.log "$LOG_URL" || true; curl -fsS -X POST -H 'content-type: application/json' -d "{\\"status\\":\\"failed\\",\\"error\\":\\"$STAGE failed (exit $code)\\"}" "$CALLBACK" || true; shutdown -h now; }\ntrap fail ERR\ncurl -fsS -X POST -H 'content-type: application/json' -d '{"status":"running"}' "$CALLBACK"\nSTAGE='system packages'\napt-get update\nDEBIAN_FRONTEND=noninteractive apt-get install -y python3-pip python3-venv ffmpeg curl\nSTAGE='python environment'\npython3 -m venv /opt/work-memory-venv\n/opt/work-memory-venv/bin/pip install --upgrade pip\n/opt/work-memory-venv/bin/pip install faster-whisper\nSTAGE='input download'\ncurl -fL '${input}' -o /tmp/input.media\ncat >/tmp/transcribe.py <<'PY'\nimport json\nfrom faster_whisper import WhisperModel\nm=WhisperModel('large-v3',device='cuda',compute_type='float16')\nsegments,info=m.transcribe('/tmp/input.media',language='${job.language || "ko"}',vad_filter=True)\nrows=[{'start':s.start,'end':s.end,'text':s.text.strip()} for s in segments]\nopen('/tmp/result.json','w',encoding='utf-8').write(json.dumps({'language':info.language,'duration':info.duration,'text':' '.join(x['text'] for x in rows),'segments':rows},ensure_ascii=False))\nPY\nSTAGE='whisper transcription'\n/opt/work-memory-venv/bin/python /tmp/transcribe.py\nSTAGE='result upload'\ncurl -fS -X PUT -H 'content-type: application/json' --upload-file /tmp/result.json '${output}'\nSTAGE='completion callback'\ncurl -fsS -X POST -H 'content-type: application/json' -d '{"status":"completed"}' "$CALLBACK"\nshutdown -h now\n`;
 }
 
-export function customWorkerScript(job) {
+export function customWorkerScript(job, baseUrl = "https://work-memory-ten.vercel.app") {
   const code = presignObject(job.bucket, job.code_key, "GET", 21600);
   const data = job.data_key ? presignObject(job.bucket, job.data_key, "GET", 21600) : "";
   const output = presignObject(job.bucket, job.result_key, "PUT", 21600);
   const log = presignObject(job.bucket, job.log_key, "PUT", 21600);
-  const callback = `${process.env.PUBLIC_BASE_URL || "https://cloud-credit-lab-console.vercel.app"}/api/worker-callback?id=${encodeURIComponent(job.id)}&token=${jobToken(job.id)}`;
+  const callback = `${baseUrl}/api/worker-callback?id=${encodeURIComponent(job.id)}&token=${jobToken(job.id)}`;
   const command64 = Buffer.from(job.command, "utf8").toString("base64");
   const outputPath = String(job.output_path || "outputs");
   const outputRoot = outputPath.split("/")[0];
@@ -94,6 +94,10 @@ export default async function handler(request, response) {
         total: data.pagination?.total || 0,
       });
     }
+    if (request.method === "GET" && action === "public-ips") {
+      const data = await cloud("network", "public-ips?limit=100");
+      return response.status(200).json({ ok: true, items: data.public_ips || [], total: data.pagination?.total || data.public_ips?.length || 0 });
+    }
     if (request.method === "GET" && action === "console-log") {
       const id = String(request.query?.id || "");
       if (!id) return response.status(400).json({ error: "instance_id_required" });
@@ -159,7 +163,9 @@ export default async function handler(request, response) {
         1440,
         Math.max(15, Number(v.max_minutes) || 60),
       );
-      const rawScript = job?.type === "custom-gpu" ? customWorkerScript({ ...job, max_minutes: maxMinutes }) : workerScript(job);
+      const requestHost = String(request.headers.host || "").toLowerCase();
+      const baseUrl = /^[a-z0-9.-]+\.vercel\.app$/.test(requestHost) ? `https://${requestHost}` : "https://work-memory-ten.vercel.app";
+      const rawScript = job?.type === "custom-gpu" ? customWorkerScript({ ...job, max_minutes: maxMinutes }, baseUrl) : workerScript(job, baseUrl);
       const userData = job
         ? rawScript.replace(
             "python3 /tmp/transcribe.py",
@@ -258,6 +264,12 @@ export default async function handler(request, response) {
       await cloud("bcs", `instances/${encodeURIComponent(id)}`, {
         method: "DELETE",
       });
+      return response.status(200).json({ ok: true, deleted: id });
+    }
+    if (request.method === "DELETE" && action === "delete-public-ip") {
+      const id = String(request.query?.id || "");
+      if (!id) return response.status(400).json({ error: "public_ip_id_required" });
+      await cloud("network", `public-ips/${encodeURIComponent(id)}`, { method: "DELETE" });
       return response.status(200).json({ ok: true, deleted: id });
     }
     return response.status(400).json({ error: "unknown_action" });
