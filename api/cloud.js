@@ -18,7 +18,7 @@ export default async function handler(request, response) {
     if (request.method === "GET" && action === "gpu-flavors") { const data = await bcs("flavors?instance_type=gpu&limit=100"); return response.status(200).json({ ok: true, items: data.flavors || [] }); }
     if (request.method === "GET" && action === "readiness") {
       const [flavors, images, keypairs, subnets] = await Promise.all([bcs("flavors?instance_type=gpu&limit=100"), cloud("image", "images?instance_type=vm&image_type=basic&limit=100"), bcs("keypairs?limit=100"), cloud("vpc", "subnets?limit=100")]);
-      return response.status(200).json({ ok: true, flavors: flavors.flavors || [], images: images.images || [], keypairs: keypairs.keypairs || [], subnets: subnets.subnets || [], security_groups: [{ name: "default" }] });
+      return response.status(200).json({ ok: true, flavors: flavors.flavors || [], images: images.images || [], keypairs: keypairs.keypairs || [], subnets: subnets.subnets || [], security_groups: [{ name: "default" }], pricing: { gpu_hourly: KAKAO_GPU_HOURLY, block_storage_gib_hour: 0.16, currency: "KRW", vat_included: false } });
     }
     if (request.method === "POST" && action === "create") {
       const v = request.body || {};
