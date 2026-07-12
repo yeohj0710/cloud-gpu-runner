@@ -26,22 +26,28 @@ export function customWorkerScript(job) {
   const callback = `${process.env.PUBLIC_BASE_URL || "https://cloud-credit-lab-console.vercel.app"}/api/worker-callback?id=${encodeURIComponent(job.id)}&token=${jobToken(job.id)}`;
   const command64 = Buffer.from(job.command, "utf8").toString("base64");
   const outputPath = String(job.output_path || "outputs");
+  const outputRoot = outputPath.split("/")[0];
   const archive = /\.zip$/i.test(job.code_key) ? "zip" : "tar";
   return `#!/bin/bash
 set -Eeuo pipefail
 CALLBACK='${callback}'
 LOG_URL='${log}'
 exec > >(tee /var/log/ccl-worker.log) 2>&1
-finish(){ status="$1"; error="\${2:-}"; tar -czf /tmp/result.tar.gz -C /workspace "${outputPath}" 2>/dev/null || tar -czf /tmp/result.tar.gz -C /workspace .; curl -fsS -X PUT -H 'content-type: application/gzip' --upload-file /tmp/result.tar.gz '${output}' || true; curl -fsS -X PUT -H 'content-type: text/plain' --upload-file /var/log/ccl-worker.log "$LOG_URL" || true; curl -fsS -X POST -H 'content-type: application/json' -d "{\"status\":\"$status\",\"error\":\"$error\"}" "$CALLBACK" || true; shutdown -h now; }
-trap 'finish failed "worker failed"' ERR
+finish(){ trap - ERR; status="$1"; error="\${2:-}"; if [ -d "/workspace/${outputPath}" ] && [ -n "$(find "/workspace/${outputPath}" -mindepth 1 -print -quit)" ]; then tar -czf /tmp/result.tar.gz -C /workspace "${outputPath}"; else printf '{"status":"%s","message":"output directory is empty"}\n' "$status" >/tmp/result-status.json; tar -czf /tmp/result.tar.gz -C /tmp result-status.json; fi; curl -fsS -X PUT -H 'content-type: application/gzip' --upload-file /tmp/result.tar.gz '${output}' || true; curl -fsS -X PUT -H 'content-type: text/plain' --upload-file /var/log/ccl-worker.log "$LOG_URL" || true; curl -fsS -X POST -H 'content-type: application/json' -d "{\"status\":\"$status\",\"error\":\"$error\"}" "$CALLBACK" || true; shutdown -h now || true; }
+fail(){ code=$?; if [ "$code" = 124 ]; then finish failed "execution timeout"; else finish failed "worker failed (exit $code)"; fi; }
+trap fail ERR
 curl -fsS -X POST -H 'content-type: application/json' -d '{"status":"running"}' "$CALLBACK"
 apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y curl unzip tar python3 python3-pip python3-venv git
 mkdir -p /workspace /workspace/input /workspace/${outputPath}
 curl -fL '${code}' -o /tmp/code.${archive === "zip" ? "zip" : "tar.gz"}
 ${archive === "zip" ? "unzip -q /tmp/code.zip -d /workspace" : "tar -xzf /tmp/code.tar.gz -C /workspace"}
 ${data ? `curl -fL '${data}' -o '/workspace/input/${String(job.data_key).split("/").pop().replace(/'/g, "")}'` : "true"}
-export CCL_DATA_DIR=/workspace/input CCL_OUTPUT_DIR=/workspace/${outputPath} CCL_JOB_ID='${job.id}'
-cd /workspace
+export CCL_DATA_DIR=/workspace/input CCL_DATA_FILE='${data ? `/workspace/input/${String(job.data_key).split("/").pop().replace(/'/g, "")}` : ""}' CCL_OUTPUT_DIR=/workspace/${outputPath} CCL_JOB_ID='${job.id}'
+WORKDIR=/workspace
+mapfile -t roots < <(find /workspace -mindepth 1 -maxdepth 1 -type d ! -name input ! -name '${outputRoot}')
+files=$(find /workspace -mindepth 1 -maxdepth 1 -type f | wc -l)
+if [ "\${#roots[@]}" = 1 ] && [ "$files" = 0 ]; then WORKDIR="\${roots[0]}"; fi
+cd "$WORKDIR"
 COMMAND=$(printf '%s' '${command64}' | base64 -d)
 timeout ${Math.min(1440, Math.max(15, Number(job.max_minutes) || 60))}m bash -lc "$COMMAND"
 trap - ERR
@@ -120,18 +126,20 @@ export default async function handler(request, response) {
       if (job.status !== "queued")
         return response.status(409).json({ error: "job_not_queued" });
       if (job) {
-        const images = await cloud(
-            "image",
-            "images?instance_type=vm&image_type=basic&limit=100",
-          ),
+        const [images, flavorData] = await Promise.all([
+          cloud("image", "images?instance_type=vm&image_type=basic&limit=100"),
+          bcs("flavors?instance_type=gpu&limit=100"),
+        ]),
           selected = (images.images || []).find(
             (image) => image.id === v.image_id,
-          );
+          ), selectedFlavor = (flavorData.flavors || []).find((flavor) => flavor.id === v.flavor_id);
         if (!selected || !/nvidia/i.test(selected.name || ""))
           return response.status(400).json({ error: "nvidia_image_required" });
+        if (!selectedFlavor || String(selectedFlavor.manufacturer).toLowerCase() !== "nvidia")
+          return response.status(400).json({ error: "nvidia_gpu_required" });
       }
       const maxMinutes = Math.min(
-        240,
+        1440,
         Math.max(15, Number(v.max_minutes) || 60),
       );
       const rawScript = job?.type === "custom-gpu" ? customWorkerScript({ ...job, max_minutes: maxMinutes }) : workerScript(job);
@@ -141,6 +149,8 @@ export default async function handler(request, response) {
             `timeout ${maxMinutes}m python3 /tmp/transcribe.py`,
           )
         : undefined;
+      if (userData && Buffer.byteLength(userData, "utf8") > 16 * 1024)
+        return response.status(400).json({ error: "user_data_too_large" });
       const data = await cloud("bcs", "instances", {
         method: "POST",
         body: {
@@ -178,7 +188,8 @@ export default async function handler(request, response) {
         await updateJob(job.id, {
           status: "provisioning",
           instance_id: data.instance?.id || data.id,
-          max_minutes: Math.min(240, Math.max(15, Number(v.max_minutes) || 60)),
+          max_minutes: Math.min(1440, Math.max(15, Number(v.max_minutes) || 60)),
+          volume_gb: Math.max(50, Number(v.volume_gb) || 50),
           flavor_name: flavor?.name,
           hourly_rate: KAKAO_GPU_HOURLY[flavor?.name] || 0,
           billing_started_at: new Date().toISOString(),

@@ -20,7 +20,9 @@ const script = customWorkerScript({
   id: "job-1", bucket: "bucket", ...input,
   result_key: "results/a.tar.gz", log_key: "logs/a.txt", max_minutes: 60,
 });
-for (const expected of ["timeout 60m", "CCL_DATA_DIR", "shutdown -h now", "finish completed"]) {
+for (const expected of ["timeout 60m", "CCL_DATA_DIR", "CCL_DATA_FILE", "shutdown -h now", "finish completed", "output directory is empty", "trap - ERR", "WORKDIR=/workspace", "execution timeout"]) {
   assert.ok(script.includes(expected), `worker script missing ${expected}`);
 }
+assert.ok(!script.includes("tar -czf /tmp/result.tar.gz -C /workspace ."), "worker must never archive the entire workspace as fallback");
+assert.ok(Buffer.byteLength(script, "utf8") < 16 * 1024, "cloud-init must stay below Kakao's 16KB user_data limit");
 console.log("GPU workbench contract tests OK");
