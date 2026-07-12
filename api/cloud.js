@@ -25,6 +25,7 @@ export default async function handler(request, response) {
       if (!v.flavor_id || !v.image_id || !v.subnet_id || !v.key_name || !v.security_group) return response.status(400).json({ error: "missing_configuration" });
       const job = v.job_id ? (await listJobs()).find(item => item.id === v.job_id) : null;
       if (v.job_id && !job) return response.status(404).json({ error: "job_not_found" });
+      if (job) { const images=await cloud("image","images?instance_type=vm&image_type=basic&limit=100"),selected=(images.images||[]).find(image=>image.id===v.image_id); if(!selected||!/nvidia/i.test(selected.name||""))return response.status(400).json({error:"nvidia_image_required"}); }
       const maxMinutes = Math.min(240, Math.max(15, Number(v.max_minutes) || 60));
       const userData = job ? workerScript(job).replace("python3 /tmp/transcribe.py", `timeout ${maxMinutes}m python3 /tmp/transcribe.py`) : undefined;
       const data = await cloud("bcs", "instances", { method: "POST", body: { instance: { name: `wm-${Date.now()}-${String(v.purpose || "job").replace(/[^a-z0-9-]/gi, "-").slice(0, 20)}`, description: `Work Memory ${v.purpose || "GPU job"}; max ${maxMinutes} minutes`, count: 1, image_id: v.image_id, flavor_id: v.flavor_id, subnets: [{ id: v.subnet_id }], volumes: [{ is_delete_on_termination: true, size: Math.max(50, Number(v.volume_gb) || 50), source_type: "image", uuid: v.image_id }], key_name: v.key_name, security_groups: [{ name: v.security_group }], user_data: userData ? Buffer.from(userData).toString("base64") : undefined } } });
