@@ -1,6 +1,6 @@
 # Cloud Credit Lab
 
-> **저장소 역할:** 이 저장소는 크레딧 활용안의 조사·판정·실험 기록입니다. 실제 로그인, 비용 원장, Object Storage, GPU 실행과 Work Memory 전사를 제공하는 운영 콘솔은 [Cloud Credit Lab Console](https://work-memory-ten.vercel.app)이며 현재 소스는 [yeohj0710/work-memory](https://github.com/yeohj0710/work-memory)에 있습니다. `work-memory`라는 저장소·배포 slug는 기존 데이터와 인증 호환을 위한 레거시 식별자입니다.
+> **저장소 역할:** 이 저장소는 크레딧 활용안의 조사·판정·실험 기록입니다. 실제 로그인, 비용 원장, Object Storage, GPU 실행과 Work Memory 전사를 제공하는 운영 콘솔은 [Cloud Credit Lab Console](https://cloud-credit-lab-console.vercel.app)이며 현재 소스는 [yeohj0710/cloud-credit-lab-console](https://github.com/yeohj0710/cloud-credit-lab-console)에 있습니다. 이전 `work-memory-ten.vercel.app` 주소는 호환 alias로만 유지합니다.
 
 네이버·카카오 크레딧을 **GPT가 대신할 수 없는 클라우드 능력**에만 쓰기 위한 실험 저장소입니다.
 
