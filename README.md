@@ -3,8 +3,9 @@
 카카오클라우드와 네이버클라우드 크레딧을 조회하고, 비용을 미리 계산한 뒤 실제 작업을 실행하는 비공개 운영 콘솔입니다.
 
 - 제품명: **Cloud Credit Lab**
-- Production: https://work-memory-ten.vercel.app
-- 현재 코드 저장소: https://github.com/yeohj0710/work-memory
+- Production: https://cloud-credit-lab-console.vercel.app
+- 호환 주소: https://work-memory-ten.vercel.app
+- 현재 코드 저장소: https://github.com/yeohj0710/cloud-credit-lab-console
 - 원래 실험 저장소: https://github.com/yeohj0710/cloud-credit-lab
 
 ## 프로젝트 경계
@@ -16,7 +17,7 @@
 
 Work Memory는 Cloud Credit Lab이 크레딧을 활용하는 여러 작업 중 하나입니다. 상위 제품 이름으로 사용하지 않습니다.
 
-GitHub 저장소 slug와 Vercel 주소의 `work-memory`는 기존 배포·환경변수·Object Storage CORS·GPU 콜백 호환을 위해 유지하는 레거시 식별자입니다. 화면과 신규 클라우드 자원 이름은 `Cloud Credit Lab`/`ccl-*`을 사용합니다.
+기존 Vercel 주소의 `work-memory`는 북마크와 이전 작업 호환을 위해 alias로만 유지합니다. 화면, GitHub 저장소, Vercel 프로젝트와 신규 클라우드 자원 이름은 `Cloud Credit Lab`/`cloud-credit-lab-console`/`ccl-*`을 사용합니다.
 
 ## 운영 기능
 
@@ -30,7 +31,7 @@ GitHub 저장소 slug와 Vercel 주소의 `work-memory`는 기존 배포·환경
 
 ## 호환성을 위해 바꾸지 않는 내부 식별자
 
-- Vercel alias: `work-memory-ten.vercel.app`
+- 이전 호환 Vercel alias: `work-memory-ten.vercel.app`
 - 세션 서명 문자열: `work-memory-authorized`
 - 기존 제어 버킷 기본값: `work-memory-control`
 - 기존 SSH 키페어: `work-memory`
@@ -41,7 +42,7 @@ GitHub 저장소 slug와 Vercel 주소의 `work-memory`는 기존 배포·환경
 ## 로컬 Work Memory 실행
 
 ```powershell
-cd C:\dev\work-memory
+cd C:\dev\cloud-credit-lab-console
 .\Start-WorkMemory.ps1
 ```
 

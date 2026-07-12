@@ -13,7 +13,7 @@ function workerScript(job) {
       "PUT",
       21600,
     ),
-    callback = `https://work-memory-ten.vercel.app/api/worker-callback?id=${encodeURIComponent(job.id)}&token=${jobToken(job.id)}`;
+    callback = `${process.env.PUBLIC_BASE_URL || "https://cloud-credit-lab-console.vercel.app"}/api/worker-callback?id=${encodeURIComponent(job.id)}&token=${jobToken(job.id)}`;
   return `#!/bin/bash\nset -euo pipefail\nCALLBACK='${callback}'\nLOG_URL='${log}'\nSTAGE='bootstrap'\nfail(){ code=$?; curl -fsS -X PUT -H 'content-type: text/plain' --upload-file /var/log/cloud-init-output.log "$LOG_URL" || true; curl -fsS -X POST -H 'content-type: application/json' -d "{\\"status\\":\\"failed\\",\\"error\\":\\"$STAGE failed (exit $code)\\"}" "$CALLBACK" || true; shutdown -h now; }\ntrap fail ERR\ncurl -fsS -X POST -H 'content-type: application/json' -d '{"status":"running"}' "$CALLBACK"\nSTAGE='system packages'\napt-get update\nDEBIAN_FRONTEND=noninteractive apt-get install -y python3-pip python3-venv ffmpeg curl\nSTAGE='python environment'\npython3 -m venv /opt/work-memory-venv\n/opt/work-memory-venv/bin/pip install --upgrade pip\n/opt/work-memory-venv/bin/pip install faster-whisper\nSTAGE='input download'\ncurl -fL '${input}' -o /tmp/input.media\ncat >/tmp/transcribe.py <<'PY'\nimport json\nfrom faster_whisper import WhisperModel\nm=WhisperModel('large-v3',device='cuda',compute_type='float16')\nsegments,info=m.transcribe('/tmp/input.media',language='${job.language || "ko"}',vad_filter=True)\nrows=[{'start':s.start,'end':s.end,'text':s.text.strip()} for s in segments]\nopen('/tmp/result.json','w',encoding='utf-8').write(json.dumps({'language':info.language,'duration':info.duration,'text':' '.join(x['text'] for x in rows),'segments':rows},ensure_ascii=False))\nPY\nSTAGE='whisper transcription'\n/opt/work-memory-venv/bin/python /tmp/transcribe.py\nSTAGE='result upload'\ncurl -fS -X PUT -H 'content-type: application/json' --upload-file /tmp/result.json '${output}'\nSTAGE='completion callback'\ncurl -fsS -X POST -H 'content-type: application/json' -d '{"status":"completed"}' "$CALLBACK"\nshutdown -h now\n`;
 }
 
@@ -30,24 +30,20 @@ export default async function handler(request, response) {
     const action = String(request.query?.action || "status");
     if (request.method === "GET" && action === "status") {
       await token();
-      return response
-        .status(200)
-        .json({
-          ok: true,
-          provider: "kakao",
-          project: process.env.KAKAO_PROJECT_ID,
-          region: process.env.KAKAO_REGION,
-        });
+      return response.status(200).json({
+        ok: true,
+        provider: "kakao",
+        project: process.env.KAKAO_PROJECT_ID,
+        region: process.env.KAKAO_REGION,
+      });
     }
     if (request.method === "GET" && action === "instances") {
       const data = await bcs("instances?limit=100");
-      return response
-        .status(200)
-        .json({
-          ok: true,
-          items: data.instances || [],
-          total: data.pagination?.total || 0,
-        });
+      return response.status(200).json({
+        ok: true,
+        items: data.instances || [],
+        total: data.pagination?.total || 0,
+      });
     }
     if (request.method === "GET" && action === "gpu-flavors") {
       const data = await bcs("flavors?instance_type=gpu&limit=100");
@@ -60,22 +56,20 @@ export default async function handler(request, response) {
         bcs("keypairs?limit=100"),
         cloud("vpc", "subnets?limit=100"),
       ]);
-      return response
-        .status(200)
-        .json({
-          ok: true,
-          flavors: flavors.flavors || [],
-          images: images.images || [],
-          keypairs: keypairs.keypairs || [],
-          subnets: subnets.subnets || [],
-          security_groups: [{ name: "default" }],
-          pricing: {
-            gpu_hourly: KAKAO_GPU_HOURLY,
-            block_storage_gib_hour: 0.16,
-            currency: "KRW",
-            vat_included: false,
-          },
-        });
+      return response.status(200).json({
+        ok: true,
+        flavors: flavors.flavors || [],
+        images: images.images || [],
+        keypairs: keypairs.keypairs || [],
+        subnets: subnets.subnets || [],
+        security_groups: [{ name: "default" }],
+        pricing: {
+          gpu_hourly: KAKAO_GPU_HOURLY,
+          block_storage_gib_hour: 0.16,
+          currency: "KRW",
+          vat_included: false,
+        },
+      });
     }
     if (request.method === "POST" && action === "create") {
       const v = request.body || {};
@@ -169,10 +163,8 @@ export default async function handler(request, response) {
     }
     return response.status(400).json({ error: "unknown_action" });
   } catch (error) {
-    return response
-      .status(502)
-      .json({
-        error: error instanceof Error ? error.message : "cloud_request_failed",
-      });
+    return response.status(502).json({
+      error: error instanceof Error ? error.message : "cloud_request_failed",
+    });
   }
 }
