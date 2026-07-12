@@ -88,7 +88,7 @@ export default async function handler(request, response) {
     if (request.method === "GET" && action === "console-log") {
       const id = String(request.query?.id || "");
       if (!id) return response.status(400).json({ error: "instance_id_required" });
-      const data = await bcs(`instances/${encodeURIComponent(id)}/console-log`);
+      const data = await bcs(`instances/${encodeURIComponent(id)}/console-logs`);
       return response.status(200).json({ ok: true, instance_id: id, data });
     }
     if (request.method === "GET" && action === "gpu-flavors") {
