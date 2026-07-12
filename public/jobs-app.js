@@ -79,7 +79,8 @@ async function loadFiles() {
   if (!buckets.items.length)
     throw new Error("네이버 저장소에 버킷이 없습니다.");
   bucket =
-    buckets.items.find((x) => /artifact|work-memory/i.test(x.name))?.name ||
+    buckets.items.find((x) => /artifact|cloud-credit|work-memory/i.test(x.name))
+      ?.name ||
     buckets.items[0].name;
   const data = await api(
     `/api/ncp-storage?action=objects&bucket=${encodeURIComponent(bucket)}`,

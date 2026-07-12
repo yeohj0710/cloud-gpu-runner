@@ -10,7 +10,7 @@
 <body>
   <aside class="sidebar">
     <a class="side-brand" href="#top"><span>W</span><strong>Work Memory</strong></a>
-    <nav><a class="active" href="#top">오늘</a><a href="#credits">크레딧</a><a href="#search">업무 검색</a><a href="#timeline">타임라인</a><a href="#gpu">GPU 작업</a><a href="#privacy">설정</a></nav>
+    <nav><a class="active" href="#top">오늘</a><a href="#credits">Cloud Credit Lab</a><a href="#search">업무 검색</a><a href="#timeline">타임라인</a><a href="#gpu">GPU 작업</a><a href="#privacy">설정</a></nav>
     <div class="side-footer"><small>LOCAL WORKSPACE</small><strong id="sideEmployee">내 PC</strong><span>데이터는 이 PC에 저장</span></div>
   </aside>
   <header class="nav"><a class="brand" href="#top"><span>W</span> Work Memory</a><div id="recordingBadge" class="status">확인 중</div></header>
@@ -23,7 +23,7 @@
     </section>
 
     <section id="credits" class="credit-section">
-      <div class="section-head credit-heading"><div><p class="label">Cloud credits</p><h2>남은 크레딧을 한눈에</h2><p>확정 청구액과 아직 청구되지 않은 예상액을 분리해 보여줍니다.</p></div><button id="usageToggle" class="secondary compact">사용액 기록</button></div>
+      <div class="section-head credit-heading"><div><p class="label">Cloud Credit Lab 연동</p><h2>남은 크레딧을 한눈에</h2><p>Work Memory 작업에 쓰는 클라우드 크레딧을 참고용으로 보여줍니다. 전체 운영은 Cloud Credit Lab에서 관리합니다.</p></div><button id="usageToggle" class="secondary compact">사용액 기록</button></div>
       <div class="credit-overview"><article class="balance-card"><span>전체 남은 크레딧</span><strong id="creditRemaining">-</strong><div class="credit-bar"><i id="creditBar"></i></div><small id="creditCaption">불러오는 중</small></article><article class="mini-stat"><span>확정 사용</span><strong id="actualUsage">-</strong><small>청구서·Billing API 기준</small></article><article class="mini-stat"><span>예상 사용</span><strong id="estimatedUsage">-</strong><small>실행 전 작업 견적</small></article></div>
       <div id="usageForm" class="usage-form hidden"><select id="usageProvider"><option value="naver">네이버클라우드</option><option value="kakao">카카오클라우드</option></select><input id="usageService" placeholder="서비스 또는 작업 이름"><input id="usageAmount" type="number" min="0" placeholder="금액(원)"><select id="usageKind"><option value="actual">확정 사용액</option><option value="estimated">예상 사용액</option><option value="adjustment">크레딧 조정</option></select><button id="usageSave" class="primary">저장</button></div>
       <div id="providerCards" class="provider-grid"></div>
