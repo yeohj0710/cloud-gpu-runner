@@ -2,7 +2,7 @@ import { isAuthorized } from "../lib/auth.js";
 import { bcs, cloud, token } from "../lib/kakao-cloud.js";
 import { jobToken, listJobs, updateJob } from "../lib/jobs.js";
 import { presignObject } from "../lib/ncp-storage.js";
-import { KAKAO_GPU_HOURLY } from "../lib/usage.js";
+import { addUsage, KAKAO_GPU_HOURLY } from "../lib/usage.js";
 import { safeInstanceDescription } from "../lib/cloud-metadata.js";
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -198,20 +198,35 @@ export default async function handler(request, response) {
           billing_started_at: new Date().toISOString(),
         });
         try {
-          let networkInterfaceId = data.instance?.addresses?.[0]?.network_interface_id;
-          for (let attempt = 0; !networkInterfaceId && attempt < 8; attempt += 1) {
+          let activeInstance;
+          for (let attempt = 0; attempt < 30; attempt += 1) {
+            const details = await bcs(`instances/${encodeURIComponent(instanceId)}`);
+            const candidate = details.instance || details;
+            if (candidate.status === "active" && !candidate.task_state) { activeInstance = candidate; break; }
+            await wait(1500);
+          }
+          if (!activeInstance) throw new Error("instance_activation_timeout");
+          let networkInterfaceId = activeInstance.addresses?.[0]?.network_interface_id;
+          if (!networkInterfaceId) {
             const interfaces = await bcs(`instances/${encodeURIComponent(instanceId)}/network-interfaces`);
             networkInterfaceId = interfaces.network_interfaces?.[0]?.id;
-            if (!networkInterfaceId) await wait(750);
           }
           if (!networkInterfaceId) throw new Error("network_interface_not_ready");
-          const publicIpData = await cloud("bcs", `instances/${encodeURIComponent(instanceId)}/network-interfaces/${encodeURIComponent(networkInterfaceId)}/public-ips`, { method: "POST" });
+          let publicIpData;
+          for (let attempt = 0; attempt < 8; attempt += 1) {
+            try { publicIpData = await cloud("bcs", `instances/${encodeURIComponent(instanceId)}/network-interfaces/${encodeURIComponent(networkInterfaceId)}/public-ips`, { method: "POST" }); break; }
+            catch (error) { if (!/409/.test(String(error.message)) || attempt === 7) throw error; await wait(1000); }
+          }
           const publicIp = publicIpData.public_ip || publicIpData;
           await updateJob(job.id, { network_interface_id: networkInterfaceId, public_ip_id: publicIp.id, public_ip_address: publicIp.public_ip, public_ip_attached_at: new Date().toISOString() });
           data.ephemeral_public_ip = { id: publicIp.id, public_ip: publicIp.public_ip };
         } catch (error) {
           try { await cloud("bcs", `instances/${encodeURIComponent(instanceId)}`, { method: "DELETE" }); } catch {}
-          await updateJob(job.id, { status: "failed", error: `인터넷 연결 준비 실패: ${String(error.message).slice(0, 180)}`, instance_deleted_at: new Date().toISOString() });
+          const failedAt = Date.now(), startedAt = new Date((await listJobs()).find((item) => item.id === job.id)?.billing_started_at || failedAt).getTime();
+          const seconds = Math.max(1, (failedAt - startedAt) / 1000), hours = seconds / 3600;
+          const gpu = (KAKAO_GPU_HOURLY[flavor?.name] || 0) * hours, disk = Math.max(50, Number(v.volume_gb) || 50) * 0.16 * hours, amount = gpu + disk;
+          await addUsage({ provider: "kakao", category: "gpu", action: "setup_failed", label: `${flavor?.name || "GPU"} · ${job.key}`, amount, meta: { job_id: job.id, seconds, gpu, disk } });
+          await updateJob(job.id, { status: "failed", error: `인터넷 연결 준비 실패: ${String(error.message).slice(0, 180)}`, instance_deleted_at: new Date().toISOString(), usage_amount: amount, usage_gpu_amount: gpu, usage_disk_amount: disk, usage_public_ip_amount: 0, usage_seconds: seconds, usage_recorded_at: new Date().toISOString() });
           throw error;
         }
       }
