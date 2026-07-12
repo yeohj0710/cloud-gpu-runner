@@ -18,6 +18,37 @@ function workerScript(job) {
   return `#!/bin/bash\nset -euo pipefail\nCALLBACK='${callback}'\nLOG_URL='${log}'\nSTAGE='bootstrap'\nfail(){ code=$?; curl -fsS -X PUT -H 'content-type: text/plain' --upload-file /var/log/cloud-init-output.log "$LOG_URL" || true; curl -fsS -X POST -H 'content-type: application/json' -d "{\\"status\\":\\"failed\\",\\"error\\":\\"$STAGE failed (exit $code)\\"}" "$CALLBACK" || true; shutdown -h now; }\ntrap fail ERR\ncurl -fsS -X POST -H 'content-type: application/json' -d '{"status":"running"}' "$CALLBACK"\nSTAGE='system packages'\napt-get update\nDEBIAN_FRONTEND=noninteractive apt-get install -y python3-pip python3-venv ffmpeg curl\nSTAGE='python environment'\npython3 -m venv /opt/work-memory-venv\n/opt/work-memory-venv/bin/pip install --upgrade pip\n/opt/work-memory-venv/bin/pip install faster-whisper\nSTAGE='input download'\ncurl -fL '${input}' -o /tmp/input.media\ncat >/tmp/transcribe.py <<'PY'\nimport json\nfrom faster_whisper import WhisperModel\nm=WhisperModel('large-v3',device='cuda',compute_type='float16')\nsegments,info=m.transcribe('/tmp/input.media',language='${job.language || "ko"}',vad_filter=True)\nrows=[{'start':s.start,'end':s.end,'text':s.text.strip()} for s in segments]\nopen('/tmp/result.json','w',encoding='utf-8').write(json.dumps({'language':info.language,'duration':info.duration,'text':' '.join(x['text'] for x in rows),'segments':rows},ensure_ascii=False))\nPY\nSTAGE='whisper transcription'\n/opt/work-memory-venv/bin/python /tmp/transcribe.py\nSTAGE='result upload'\ncurl -fS -X PUT -H 'content-type: application/json' --upload-file /tmp/result.json '${output}'\nSTAGE='completion callback'\ncurl -fsS -X POST -H 'content-type: application/json' -d '{"status":"completed"}' "$CALLBACK"\nshutdown -h now\n`;
 }
 
+export function customWorkerScript(job) {
+  const code = presignObject(job.bucket, job.code_key, "GET", 21600);
+  const data = job.data_key ? presignObject(job.bucket, job.data_key, "GET", 21600) : "";
+  const output = presignObject(job.bucket, job.result_key, "PUT", 21600);
+  const log = presignObject(job.bucket, job.log_key, "PUT", 21600);
+  const callback = `${process.env.PUBLIC_BASE_URL || "https://cloud-credit-lab-console.vercel.app"}/api/worker-callback?id=${encodeURIComponent(job.id)}&token=${jobToken(job.id)}`;
+  const command64 = Buffer.from(job.command, "utf8").toString("base64");
+  const outputPath = String(job.output_path || "outputs");
+  const archive = /\.zip$/i.test(job.code_key) ? "zip" : "tar";
+  return `#!/bin/bash
+set -Eeuo pipefail
+CALLBACK='${callback}'
+LOG_URL='${log}'
+exec > >(tee /var/log/ccl-worker.log) 2>&1
+finish(){ status="$1"; error="\${2:-}"; tar -czf /tmp/result.tar.gz -C /workspace "${outputPath}" 2>/dev/null || tar -czf /tmp/result.tar.gz -C /workspace .; curl -fsS -X PUT -H 'content-type: application/gzip' --upload-file /tmp/result.tar.gz '${output}' || true; curl -fsS -X PUT -H 'content-type: text/plain' --upload-file /var/log/ccl-worker.log "$LOG_URL" || true; curl -fsS -X POST -H 'content-type: application/json' -d "{\"status\":\"$status\",\"error\":\"$error\"}" "$CALLBACK" || true; shutdown -h now; }
+trap 'finish failed "worker failed"' ERR
+curl -fsS -X POST -H 'content-type: application/json' -d '{"status":"running"}' "$CALLBACK"
+apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y curl unzip tar python3 python3-pip python3-venv git
+mkdir -p /workspace /workspace/input /workspace/${outputPath}
+curl -fL '${code}' -o /tmp/code.${archive === "zip" ? "zip" : "tar.gz"}
+${archive === "zip" ? "unzip -q /tmp/code.zip -d /workspace" : "tar -xzf /tmp/code.tar.gz -C /workspace"}
+${data ? `curl -fL '${data}' -o '/workspace/input/${String(job.data_key).split("/").pop().replace(/'/g, "")}'` : "true"}
+export CCL_DATA_DIR=/workspace/input CCL_OUTPUT_DIR=/workspace/${outputPath} CCL_JOB_ID='${job.id}'
+cd /workspace
+COMMAND=$(printf '%s' '${command64}' | base64 -d)
+timeout ${Math.min(1440, Math.max(15, Number(job.max_minutes) || 60))}m bash -lc "$COMMAND"
+trap - ERR
+finish completed ""
+`;
+}
+
 export default async function handler(request, response) {
   if (
     !(await isAuthorized(
@@ -103,8 +134,9 @@ export default async function handler(request, response) {
         240,
         Math.max(15, Number(v.max_minutes) || 60),
       );
+      const rawScript = job?.type === "custom-gpu" ? customWorkerScript({ ...job, max_minutes: maxMinutes }) : workerScript(job);
       const userData = job
-        ? workerScript(job).replace(
+        ? rawScript.replace(
             "python3 /tmp/transcribe.py",
             `timeout ${maxMinutes}m python3 /tmp/transcribe.py`,
           )
