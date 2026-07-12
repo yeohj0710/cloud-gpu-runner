@@ -19,6 +19,13 @@ let bucket = "",
   readiness = null,
   runJob = null,
   resultData = null;
+let recorder = null,
+  recordStream = null,
+  recordChunks = [],
+  recordedFile = null,
+  recordStartedAt = 0,
+  recordTimerId = null,
+  recordPreviewUrl = "";
 async function api(url, options = {}) {
   const r = await fetch(url, {
       headers: { "content-type": "application/json" },
@@ -74,14 +81,108 @@ function dateText(value) {
 function money(value) {
   return `${Number(value || 0).toLocaleString("ko-KR", { maximumFractionDigits: Number(value) < 1 ? 4 : 2 })}원`;
 }
+function recordingMimeType() {
+  return (
+    [
+      "audio/webm;codecs=opus",
+      "audio/webm",
+      "audio/ogg;codecs=opus",
+      "audio/mp4",
+    ].find((type) => window.MediaRecorder?.isTypeSupported?.(type)) || ""
+  );
+}
+function formatRecordTime(ms) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+function resetRecording() {
+  if (recordPreviewUrl) URL.revokeObjectURL(recordPreviewUrl);
+  recordPreviewUrl = "";
+  recordedFile = null;
+  $("#recordPlayer").removeAttribute("src");
+  $("#recordPreview").classList.add("hidden");
+  $("#recordActive").classList.add("hidden");
+  $("#recordIdle").classList.remove("hidden");
+  $("#recordHelp").textContent =
+    "예: “오늘 오후 세 시에 배포 오류를 확인하고 고객에게 결과를 공유했습니다.”";
+}
+async function startRecording() {
+  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+    return showMessage(
+      "이 브라우저는 마이크 녹음을 지원하지 않습니다. Chrome 최신 버전이나 파일 선택을 이용해 주세요.",
+      true,
+    );
+  }
+  try {
+    recordStream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true },
+      video: false,
+    });
+    const mimeType = recordingMimeType();
+    recorder = new MediaRecorder(
+      recordStream,
+      mimeType ? { mimeType } : undefined,
+    );
+    recordChunks = [];
+    recorder.ondataavailable = (event) => {
+      if (event.data.size) recordChunks.push(event.data);
+    };
+    recorder.onstop = finishRecording;
+    recorder.start(500);
+    recordStartedAt = Date.now();
+    $("#recordIdle").classList.add("hidden");
+    $("#recordPreview").classList.add("hidden");
+    $("#recordActive").classList.remove("hidden");
+    $("#recordHelp").textContent =
+      "마이크 입력은 아직 이 브라우저 안에만 있습니다.";
+    recordTimerId = setInterval(() => {
+      const elapsed = Date.now() - recordStartedAt;
+      $("#recordTimer").textContent = formatRecordTime(elapsed);
+      if (elapsed >= 300000) stopRecording();
+    }, 250);
+  } catch (error) {
+    const denied = error.name === "NotAllowedError";
+    showMessage(
+      denied
+        ? "마이크 권한이 차단됐습니다. 주소창 왼쪽 설정에서 마이크를 허용해 주세요."
+        : `녹음을 시작하지 못했습니다: ${error.message}`,
+      true,
+    );
+  }
+}
+function stopRecording() {
+  if (recorder?.state === "recording") recorder.stop();
+}
+function finishRecording() {
+  clearInterval(recordTimerId);
+  recordStream?.getTracks().forEach((track) => track.stop());
+  const mime = recorder?.mimeType || "audio/webm";
+  const blob = new Blob(recordChunks, { type: mime });
+  const extension = mime.includes("mp4")
+    ? "m4a"
+    : mime.includes("ogg")
+      ? "ogg"
+      : "webm";
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+  recordedFile = new File([blob], `live-recording-${stamp}.${extension}`, {
+    type: mime,
+  });
+  recordPreviewUrl = URL.createObjectURL(blob);
+  $("#recordPlayer").src = recordPreviewUrl;
+  $("#recordInfo").textContent =
+    `${formatRecordTime(Date.now() - recordStartedAt)} · ${sizeText(blob.size)} · 올리기 전에는 비용 0원`;
+  $("#recordActive").classList.add("hidden");
+  $("#recordPreview").classList.remove("hidden");
+  $("#recordHelp").textContent =
+    "미리 들어본 뒤 ‘이 녹음 올리기’를 눌러야 저장소와 분석 흐름으로 넘어갑니다.";
+}
 async function loadFiles() {
   const buckets = await api("/api/ncp-storage?action=buckets");
   if (!buckets.items.length)
     throw new Error("네이버 저장소에 버킷이 없습니다.");
   bucket =
     buckets.items.find((x) => /artifact|cloud-credit|work-memory/i.test(x.name))
-      ?.name ||
-    buckets.items[0].name;
+      ?.name || buckets.items[0].name;
   const data = await api(
     `/api/ncp-storage?action=objects&bucket=${encodeURIComponent(bucket)}`,
   );
@@ -126,10 +227,18 @@ function validFile(file) {
 }
 async function upload(file) {
   if (!validFile(file))
-    return showMessage("지원하는 녹화·음성 파일을 선택해 주세요.", true);
+    return (
+      showMessage("지원하는 녹화·음성 파일을 선택해 주세요.", true),
+      false
+    );
   const storage30Days = (file.size / 1073741824) * 28;
   const uploadCost = 0.0045;
-  if (!confirm(`${file.name}\n\n예상 비용(VAT 별도)\n· 업로드 API: ${money(uploadCost)}\n· 30일 보관: ${money(storage30Days)}\n· 합계: ${money(uploadCost + storage30Days)}\n\n업로드할까요?`)) return;
+  if (
+    !confirm(
+      `${file.name}\n\n예상 비용(VAT 별도)\n· 업로드 API: ${money(uploadCost)}\n· 30일 보관: ${money(storage30Days)}\n· 합계: ${money(uploadCost + storage30Days)}\n\n업로드할까요?`,
+    )
+  )
+    return false;
   if (!bucket) await loadFiles();
   const clean = file.name.replace(/[^a-zA-Z0-9가-힣._ -]/g, "_").slice(-140),
     key = `uploads/${new Date().toISOString().slice(0, 10)}/${Date.now()}-${clean}`;
@@ -174,9 +283,11 @@ async function upload(file) {
     chooseObject(key);
     showMessage("파일을 올렸고 예상 보관 비용을 기록했습니다.");
     setTimeout(() => $("#uploadProgress").classList.add("hidden"), 1800);
+    return true;
   } catch (e) {
     $("#uploadStatus").textContent = e.message;
     showMessage(e.message, true);
+    return false;
   }
 }
 async function createJob() {
@@ -307,11 +418,14 @@ function openRun(id) {
 
 function updateRunEstimate() {
   if (!readiness || !$("#runDialog").open) return;
-  const flavor = readiness.flavors.find((item) => item.id === $("#gpuFlavor").value);
+  const flavor = readiness.flavors.find(
+    (item) => item.id === $("#gpuFlavor").value,
+  );
   const hours = Number($("#maxMinutes").value) / 60;
   const volume = Number($("#volumeGb").value);
   const gpuHourly = Number(readiness.pricing?.gpu_hourly?.[flavor?.name] || 0);
-  const diskHourly = volume * Number(readiness.pricing?.block_storage_gib_hour || 0.16);
+  const diskHourly =
+    volume * Number(readiness.pricing?.block_storage_gib_hour || 0.16);
   const total = (gpuHourly + diskHourly) * hours;
   let box = $("#costEstimate");
   if (!box) {
@@ -465,6 +579,18 @@ async function removeFile(key) {
   }
 }
 $("#dropzone").onclick = () => $("#uploadFile").click();
+$("#startRecord").onclick = startRecording;
+$("#stopRecord").onclick = stopRecording;
+$("#discardRecord").onclick = resetRecording;
+$("#uploadRecord").onclick = async () => {
+  if (!recordedFile) return;
+  $("#uploadRecord").disabled = true;
+  try {
+    if (await upload(recordedFile)) resetRecording();
+  } finally {
+    $("#uploadRecord").disabled = false;
+  }
+};
 $("#dropzone").onkeydown = (e) => {
   if (e.key === "Enter" || e.key === " ") $("#uploadFile").click();
 };

@@ -33,12 +33,50 @@
         <div class="section-heading">
           <div>
             <p class="eyebrow">1. 파일 준비</p>
-            <h2>녹화나 음성 파일을 선택하세요</h2>
+            <h2>지금 녹음하거나 파일을 선택하세요</h2>
             <p>
-              컴퓨터에서 새로 올리거나, 전에 올린 미디어를 다시 선택할 수
-              있어요.
+              테스트할 파일이 없어도 마이크로 10초 정도 말해보고 바로 분석
+              흐름을 체험할 수 있어요.
             </p>
           </div>
+        </div>
+        <div class="input-choices">
+          <article class="record-card">
+            <div class="record-intro">
+              <span class="choice-icon">●</span>
+              <div>
+                <b>마이크로 바로 녹음</b
+                ><small
+                  >브라우저에서만 녹음하며, 올리기 전에는 서버로 전송하지
+                  않아요.</small
+                >
+              </div>
+            </div>
+            <div id="recordIdle" class="record-actions">
+              <button id="startRecord" class="record-primary">녹음 시작</button
+              ><span>권장 10~30초</span>
+            </div>
+            <div id="recordActive" class="record-live hidden">
+              <i></i><b id="recordTimer">00:00</b
+              ><span>녹음 중이에요. 테스트 문장을 말해보세요.</span
+              ><button id="stopRecord">녹음 끝내기</button>
+            </div>
+            <div id="recordPreview" class="record-preview hidden">
+              <audio id="recordPlayer" controls></audio>
+              <div>
+                <button id="discardRecord">다시 녹음</button
+                ><button id="uploadRecord" class="record-primary">
+                  이 녹음 올리기
+                </button>
+              </div>
+              <small id="recordInfo"></small>
+            </div>
+            <p id="recordHelp" class="record-help">
+              예: “오늘 오후 세 시에 배포 오류를 확인하고 고객에게 결과를
+              공유했습니다.”
+            </p>
+          </article>
+          <div class="choice-or"><span>또는</span></div>
         </div>
         <div
           id="dropzone"
@@ -54,7 +92,7 @@
             hidden
           />
           <div class="upload-icon">↑</div>
-          <b>파일을 끌어놓거나 눌러서 선택</b
+          <b>컴퓨터 파일을 끌어놓거나 눌러서 선택</b
           ><span>MP3, WAV, M4A, MP4, MOV, WEBM, MKV · 대용량 지원</span>
         </div>
         <div id="uploadProgress" class="progress hidden">
