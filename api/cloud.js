@@ -5,6 +5,8 @@ import { presignObject } from "../lib/ncp-storage.js";
 import { KAKAO_GPU_HOURLY } from "../lib/usage.js";
 import { safeInstanceDescription } from "../lib/cloud-metadata.js";
 
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 function workerScript(job) {
   const input = presignObject(job.bucket, job.key, "GET", 21600),
     output = presignObject(job.bucket, job.result_key, "PUT", 21600),
@@ -182,18 +184,36 @@ export default async function handler(request, response) {
         },
       });
       if (job) {
+        const instanceId = data.instance?.id || data.id;
         const flavor = (
           await bcs("flavors?instance_type=gpu&limit=100")
         ).flavors?.find((x) => x.id === v.flavor_id);
         await updateJob(job.id, {
           status: "provisioning",
-          instance_id: data.instance?.id || data.id,
+          instance_id: instanceId,
           max_minutes: Math.min(1440, Math.max(15, Number(v.max_minutes) || 60)),
           volume_gb: Math.max(50, Number(v.volume_gb) || 50),
           flavor_name: flavor?.name,
           hourly_rate: KAKAO_GPU_HOURLY[flavor?.name] || 0,
           billing_started_at: new Date().toISOString(),
         });
+        try {
+          let networkInterfaceId = data.instance?.addresses?.[0]?.network_interface_id;
+          for (let attempt = 0; !networkInterfaceId && attempt < 8; attempt += 1) {
+            const interfaces = await bcs(`instances/${encodeURIComponent(instanceId)}/network-interfaces`);
+            networkInterfaceId = interfaces.network_interfaces?.[0]?.id;
+            if (!networkInterfaceId) await wait(750);
+          }
+          if (!networkInterfaceId) throw new Error("network_interface_not_ready");
+          const publicIpData = await cloud("bcs", `instances/${encodeURIComponent(instanceId)}/network-interfaces/${encodeURIComponent(networkInterfaceId)}/public-ips`, { method: "POST" });
+          const publicIp = publicIpData.public_ip || publicIpData;
+          await updateJob(job.id, { network_interface_id: networkInterfaceId, public_ip_id: publicIp.id, public_ip_address: publicIp.public_ip, public_ip_attached_at: new Date().toISOString() });
+          data.ephemeral_public_ip = { id: publicIp.id, public_ip: publicIp.public_ip };
+        } catch (error) {
+          try { await cloud("bcs", `instances/${encodeURIComponent(instanceId)}`, { method: "DELETE" }); } catch {}
+          await updateJob(job.id, { status: "failed", error: `인터넷 연결 준비 실패: ${String(error.message).slice(0, 180)}`, instance_deleted_at: new Date().toISOString() });
+          throw error;
+        }
       }
       return response.status(201).json({ ok: true, instance: data });
     }

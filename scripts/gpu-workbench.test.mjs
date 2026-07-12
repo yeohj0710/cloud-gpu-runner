@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { validateCustomJob } from "../lib/jobs.js";
 import { customWorkerScript } from "../api/cloud.js";
+import { estimateGpu } from "../lib/usage.js";
 
 process.env.SESSION_SECRET ||= "test-session-secret";
 process.env.NCP_OBJECT_STORAGE_ACCESS_KEY_ID ||= "test-access";
@@ -25,4 +26,9 @@ for (const expected of ["timeout 60m", "CCL_DATA_DIR", "CCL_DATA_FILE", "shutdow
 }
 assert.ok(!script.includes("tar -czf /tmp/result.tar.gz -C /workspace ."), "worker must never archive the entire workspace as fallback");
 assert.ok(Buffer.byteLength(script, "utf8") < 16 * 1024, "cloud-init must stay below Kakao's 16KB user_data limit");
+const estimate = estimateGpu("gn1i.xlarge", 60, 80);
+assert.equal(estimate.gpu, 648);
+assert.equal(estimate.disk, 12.8);
+assert.equal(estimate.public_ip, 5.5);
+assert.ok(Math.abs(estimate.total - 666.3098) < 0.0001, "estimate must include GPU, disk, public IP and four storage requests");
 console.log("GPU workbench contract tests OK");
