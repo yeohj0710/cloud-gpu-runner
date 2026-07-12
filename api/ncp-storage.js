@@ -1,8 +1,8 @@
 import { isAuthorized } from "../lib/auth.js";
-import { createBucket, deleteBucket, deleteObject, downloadObject, listBuckets, listObjects, uploadObject } from "../lib/kakao-storage.js";
+import { createBucket, deleteBucket, deleteObject, downloadObject, listBuckets, listObjects, uploadObject } from "../lib/ncp-storage.js";
 
 export default async function handler(request, response) {
-  if (!await isAuthorized(new Request("https://work-memory/api/kakao-storage", { headers: { cookie: request.headers.cookie || "" } }))) return response.status(401).json({ error: "unauthorized" });
+  if (!await isAuthorized(new Request("https://work-memory/api/ncp-storage", { headers: { cookie: request.headers.cookie || "" } }))) return response.status(401).json({ error: "unauthorized" });
   try {
     const action = String(request.query?.action || "buckets");
     const bucket = String(request.query?.bucket || request.body?.bucket || "");
