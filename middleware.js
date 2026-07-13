@@ -2,6 +2,9 @@ import { isAuthorized } from "./lib/auth.js";
 export default async function middleware(request) {
   const url = new URL(request.url);
   if (
+    url.pathname === "/" ||
+    url.pathname === "/index.html" ||
+    url.pathname === "/api/public-dashboard" ||
     url.pathname === "/login" ||
     url.pathname === "/login.html" ||
     url.pathname === "/api/login" ||
