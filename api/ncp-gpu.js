@@ -1,6 +1,6 @@
 import { isAuthorized } from "../lib/auth.js";
 import { customWorkerScript } from "./cloud.js";
-import { createNcpGpu, deleteNcpGpu, ncpGpuReadiness, NCP_BLOCK_STORAGE_GIB_HOUR } from "../lib/ncp-gpu.js";
+import { bootstrapNcpGpu, createNcpGpu, deleteNcpGpu, ncpGpuReadiness, NCP_BLOCK_STORAGE_GIB_HOUR } from "../lib/ncp-gpu.js";
 import { listJobs, updateJob } from "../lib/jobs.js";
 
 export default async function handler(request, response) {
@@ -8,6 +8,7 @@ export default async function handler(request, response) {
   try {
     if (request.method === "GET") return response.json(await ncpGpuReadiness(String(request.query?.region || "KR")));
     if (request.method !== "POST") return response.status(405).json({ error: "method_not_allowed" });
+    if (String(request.query?.action || "") === "bootstrap") return response.json(await bootstrapNcpGpu("KR"));
     const value = request.body || {};
     let job = (await listJobs()).find((item) => item.id === String(value.job_id || ""));
     if (!job) return response.status(404).json({ error: "job_not_found" });

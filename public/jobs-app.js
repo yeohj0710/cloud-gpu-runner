@@ -54,6 +54,7 @@ function updateProviderCards() {
     ? `사용 가능 · ${naver.specs.length}개 사양 · 7/31 만료분 우선`
     : `준비 필요${naver?.missing?.length ? ` · ${naver.missing.join(", ")}` : ""}`;
   $("#naverState").textContent = naverText;
+  $("#setupNaver").classList.toggle("hidden", Boolean(naver?.ok));
   $("#kakaoState").textContent = kakao?.ready
     ? `사용 가능 · ${kakao.flavors.length}개 사양 · 2027/5/31 만료`
     : "준비 필요";
@@ -145,6 +146,25 @@ async function loadEnvironment() {
   };
   naver = n;
   updateProviderCards();
+}
+function savePrivateKey(value) {
+  if (!value) return;
+  const blob = new Blob([value], { type: "application/x-pem-file" });
+  const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = "ccl-gpu.pem"; link.click(); URL.revokeObjectURL(link.href);
+}
+async function setupNaver() {
+  const button = $("#setupNaver"); button.disabled = true;
+  try {
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const result = await api("/api/ncp-gpu?action=bootstrap", { method: "POST", body: "{}" });
+      savePrivateKey(result.private_key);
+      $("#setupNaverState").textContent = result.message || (result.ok ? "네이버 GPU 환경 준비가 끝났어요." : "준비 상태를 확인하는 중…");
+      if (result.ok) { naver = result; updateProviderCards(); return; }
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+    }
+    throw new Error("네이버 환경 생성이 오래 걸리고 있어요. 잠시 후 다시 눌러주세요.");
+  } catch (error) { $("#setupNaverState").textContent = errorText(error); }
+  finally { button.disabled = false; }
 }
 async function calculate() {
   const option = $("#flavor").selectedOptions[0];
@@ -269,6 +289,7 @@ document
   $(s).addEventListener("change", calculate),
 );
 $("#run").addEventListener("click", run);
+$("#setupNaver").addEventListener("click", setupNaver);
 $("#refresh").addEventListener("click", loadJobs);
 $("#jobs").addEventListener("click", async (e) => {
   const id = e.target.dataset.cancel;
