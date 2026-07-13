@@ -1,6 +1,6 @@
 # Cloud Credit Lab — Research Archive
 
-실제 실행 환경의 이름은 **Cloud GPU Runner**입니다. 이 저장소는 크레딧 조사·비용 근거·초기 실험 기록을 보존합니다. GPU 작업은 `C:\dev\cloud-gpu.ps1`과 `C:\dev\AGENTS.md`를 사용합니다.
+실제 실행 환경의 이름은 **Cloud GPU Runner**입니다. 이 저장소는 크레딧 조사·비용 근거·초기 실험 기록과 공용 GPU 명령을 함께 보존합니다. GPU 작업은 `C:\dev\cloud-credit-lab\scripts\cloud-gpu.ps1`과 이 저장소의 `AGENTS.md`를 사용합니다.
 
 > **저장소 역할:** 이 저장소는 크레딧 활용안의 조사·판정·실험 기록입니다. 실제 로그인, 비용 원장, Object Storage, GPU 실행과 Work Memory 전사를 제공하는 운영 콘솔은 [Cloud Credit Lab Console](https://cloud-credit-lab-console.vercel.app)이며 현재 소스는 [yeohj0710/cloud-credit-lab-console](https://github.com/yeohj0710/cloud-credit-lab-console)에 있습니다. 이전 `work-memory-ten.vercel.app` 주소는 호환 alias로만 유지합니다.
 
