@@ -3,228 +3,53 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Cloud GPU Runner · 운영 콘솔</title>
+    <meta name="theme-color" content="#f9fafb" />
+    <title>GPU 크레딧 현황 | Cloud GPU Runner</title>
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="/style.css" />
-    <link rel="stylesheet" href="/cloud.css" />
-    <link rel="stylesheet" href="/ui.css" />
+    <link rel="stylesheet" href="/dashboard.css" />
   </head>
   <body>
-    <aside>
-      <a class="logo" href="/"
-        ><span class="logo-mark">C</span><strong>Cloud GPU Runner</strong></a
-      >
-      <nav>
-        <a class="active" href="#overview">한눈에 보기</a
-        ><a href="#services">클라우드 기능</a><a href="#gpu">GPU 실행</a
-        ><a href="#ledger">비용 기록</a>
-      </nav>
-      <div class="local">
-        <small>PRIVATE CLOUD CONSOLE</small><b>로그인 보호됨</b
-        ><span>클라우드 키는 서버에만 보관됩니다.</span>
-      </div>
-    </aside>
-    <header>
-      <span class="online">● Protected online</span>
-      <div>
-        <button id="logout" class="text-button">로그아웃</button>
-        <a href="https://github.com/yeohj0710/cloud-gpu-runner-console"
-          >코드 저장소</a
-        >
-      </div>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Cloud GPU Runner 홈"><span>C</span>Cloud GPU Runner</a>
+      <div class="top-actions"><span class="live"><i></i> 운영 중</span><button id="refresh" type="button">새로고침</button><button id="logout" type="button">로그아웃</button></div>
     </header>
+
     <main>
-      <section id="overview">
-        <p class="label">Cloud control</p>
-        <h1>남은 크레딧을<br />실제 기능으로 씁니다</h1>
-        <p class="lead">
-          카카오·네이버 클라우드의 서버, 비용, GPU, 파일 저장소를 한곳에서
-          확인하고 조작합니다.
-        </p>
-        <div class="summary">
-          <article class="balance">
-            <span>설정된 총 크레딧</span><strong>15,300,000원</strong
-            ><small>네이버 530만원 + 카카오 1,000만원</small>
-          </article>
-          <article>
-            <span>네이버 이번 달</span><strong id="ncpCost">조회 전</strong
-            ><button data-overview="ncp">실제 비용 조회</button>
-          </article>
-          <article>
-            <span>카카오 실행 서버</span
-            ><strong id="kakaoInstances">조회 전</strong
-            ><button data-overview="kakao">서버 조회</button>
-          </article>
-        </div>
-        <pre id="overviewOutput" class="cloud-output">
-버튼을 누르면 실제 클라우드 API 결과를 표시합니다.</pre
-        >
-      </section>
-      <section id="services">
-        <p class="label">Live services</p>
-        <h2>지금 사용할 수 있는 기능</h2>
-        <div class="service-grid">
-          <a href="/research" class="featured-service"
-            ><b>PubMed 연구 근거 수집기</b
-            ><span
-              >최신 문헌을 실제 PubMed에서 검색해 제목·초록·DOI를 수집하고, 중복
-              제거된 연구용 CSV로 저장해요.</span
-            ><em>연구 검색식 실행 →</em></a
-          ><a href="/storage"
-            ><b>카카오 파일 저장소</b
-            ><span
-              >결과물과 백업 파일을 카카오에 보관해요. 작은 파일로 직접
-              업로드·다운로드를 시험할 수 있어요.</span
-            ><em>파일 보관 테스트 →</em></a
-          ><a href="/ncp-storage"
-            ><b>네이버 파일 저장소</b
-            ><span
-              >영상 같은 대용량 파일을 올리고 공유 저장소처럼 관리해요. 선택
-              즉시 30일 예상비용을 보여줘요.</span
-            ><em>대용량 파일 올리기 →</em></a
-          ><a href="/jobs"
-            ><b>Work Memory · 녹화·음성 검색</b
-            ><span
-              >마이크로 바로 녹음하거나 회의 영상을 올려, 말한 내용을 시간대별로
-              검색해요.</span
-            ><em>10초 녹음으로 체험 →</em></a
-          ><a href="/explorer"
-            ><b>클라우드 API 탐색기</b
-            ><span
-              >현재 만들어진 서버·네트워크·디스크를 비용 없이 확인해요. 무엇이
-              과금 중인지 점검할 때 써요.</span
-            ><em>현재 자원 점검 →</em></a
-          ><a href="/ncp"
-            ><b>네이버 비용·서버</b
-            ><span
-              >이번 달 실제 청구액과 실행 중인 서버를 조회해 예상치 못한 과금을
-              확인해요.</span
-            ><em>실제 청구액 확인 →</em></a
-          >
+      <section class="hero" aria-labelledby="pageTitle">
+        <p class="eyebrow">GPU CREDIT</p>
+        <div class="hero-row">
+          <div><h1 id="pageTitle">GPU 크레딧을<br />한눈에 확인하세요</h1><p class="intro">두 클라우드의 남은 크레딧과 작업별 사용 내역, 자원 반납 상태를 한 화면에서 확인할 수 있어요.</p></div>
+          <div class="total"><span>전체 남은 크레딧</span><strong id="totalRemaining">—</strong><small id="updatedAt">불러오는 중</small></div>
         </div>
       </section>
-      <section id="gpu">
-        <p class="label">Work Memory · Kakao GPU</p>
-        <h2>녹화·음성을 검색 가능한 글로 바꿔요</h2>
-        <p class="lead">
-          회의 녹화, 업무 영상, 음성 메모를 올리면 카카오 GPU가 음성을 받아쓰고
-          시간대별 검색 결과를 만듭니다. GPU 서버만 따로 만드는 기능은 제공하지
-          않습니다.
-        </p>
-        <ol class="gpu-flow">
-          <li>
-            <span>1</span>
-            <div>
-              <b>파일 올리기</b
-              ><small>Work Memory에서 MP3·WAV·MP4 등을 선택해요.</small>
-            </div>
-          </li>
-          <li>
-            <span>2</span>
-            <div>
-              <b>분석 작업 만들기</b
-              ><small>언어를 선택하면 실행 대기 작업이 생겨요.</small>
-            </div>
-          </li>
-          <li>
-            <span>3</span>
-            <div>
-              <b>비용 확인 후 실행</b
-              ><small
-                >예상 최대비용을 보고 동의한 경우에만 GPU를 만들어요.</small
-              >
-            </div>
-          </li>
-          <li>
-            <span>4</span>
-            <div>
-              <b>결과 검색</b
-              ><small
-                >완료되면 문장을 검색하고 해당 영상 시점으로 이동해요.</small
-              >
-            </div>
-          </li>
-        </ol>
-        <div class="action-row">
-          <a class="workflow-link" href="/jobs">1. 파일 올리고 작업 만들기</a>
-          <button id="prepareGpu">2. 실행할 작업 불러오기</button
-          ><button id="listGpu">실행 서버 새로고침</button>
-        </div>
-        <div id="gpuOutput" class="cloud-output">
-          먼저 파일을 올려 분석 작업을 만든 다음 ‘실행할 작업 불러오기’를
-          누르세요.
-        </div>
-        <div id="noGpuJob" class="gpu-empty hidden">
-          <b>아직 실행할 분석 작업이 없어요.</b>
-          <p>
-            GPU는 파일 없이 실행하면 비용만 발생합니다. Work Memory에서 파일을
-            올리고 분석 작업을 먼저 만들어 주세요.
-          </p>
-          <a href="/jobs">파일 올리러 가기 →</a>
-        </div>
-        <form id="gpuLauncher" class="launcher hidden">
-          <label
-            >분석 작업<select id="job">
-              <option value="">실행 대기 작업을 선택하세요</option>
-            </select></label
-          ><label
-            >GPU 사양<select id="flavor"></select
-            ><small>음성 전사에 맞는 NVIDIA GPU만 표시해요.</small></label
-          ><label
-            >최대 실행시간(분)<input
-              id="maxMinutes"
-              type="number"
-              min="15"
-              max="240"
-              value="60" /></label
-          ><label
-            >디스크(GB)<input
-              id="volumeGb"
-              type="number"
-              min="50"
-              max="500"
-              value="80"
-          /></label>
-          <details class="advanced">
-            <summary>고급 인프라 설정</summary>
-            <div>
-              <label>OS 이미지<select id="image"></select></label
-              ><label>서브넷<select id="subnet"></select></label
-              ><label>보안 그룹<select id="securityGroup"></select></label
-              ><label>SSH 키페어<select id="keypair"></select></label>
-            </div>
-          </details>
-          <div id="mainGpuEstimate" class="cost-estimate">
-            작업과 GPU를 불러오면 최대 예상 비용을 계산합니다.
-          </div>
-          <button type="submit" class="danger">비용 확인하고 분석 시작</button>
-        </form>
+
+      <section class="providers" aria-labelledby="providerTitle">
+        <div class="section-head"><div><p class="eyebrow">BALANCE</p><h2 id="providerTitle">공급자별 크레딧</h2></div><p>VAT 별도 · 실제 청구액과 실행 로그 기준</p></div>
+        <div id="providerCards" class="provider-grid" aria-live="polite"></div>
       </section>
-      <section id="ledger">
-        <p class="label">Persistent ledger</p>
-        <h2>팀 공용 비용 기록</h2>
-        <p class="lead">
-          기록은 네이버 Object Storage에 영구 저장되어 다른 PC에서도 동일하게
-          보입니다.
-        </p>
-        <div id="form" class="form">
-          <select id="provider">
-            <option value="naver">네이버클라우드</option>
-            <option value="kakao">카카오클라우드</option></select
-          ><input id="service" placeholder="서비스 또는 작업" /><input
-            id="amount"
-            type="number"
-            min="0"
-            placeholder="금액(원)"
-          /><select id="kind">
-            <option value="actual">확정 사용</option>
-            <option value="estimated">예상 사용</option>
-            <option value="adjustment">잔액 조정</option></select
-          ><button id="save">기록</button>
+
+      <section class="usage-band" aria-labelledby="usageTitle">
+        <div class="section-inner">
+          <div class="section-head"><div><p class="eyebrow">USAGE</p><h2 id="usageTitle">어디에 사용했나요?</h2></div><p id="usageSummary">사용량을 불러오고 있어요.</p></div>
+          <div id="categoryBars" class="category-bars"></div>
         </div>
-        <div id="entries" class="entries"></div>
+      </section>
+
+      <section class="jobs-section" aria-labelledby="jobsTitle">
+        <div class="section-head"><div><p class="eyebrow">GPU JOBS</p><h2 id="jobsTitle">최근 GPU 작업</h2></div><div class="filter" role="group" aria-label="작업 필터"><button class="active" data-filter="all">전체</button><button data-filter="running">실행 중</button><button data-filter="completed">완료</button><button data-filter="failed">실패</button></div></div>
+        <div class="table-wrap"><table><thead><tr><th>작업</th><th>공급자</th><th>상태</th><th>실행시간</th><th>실제 비용</th><th>자원 반납</th><th>시작 시각</th></tr></thead><tbody id="jobRows"></tbody></table></div>
+        <div id="jobCards" class="job-cards"></div>
+        <div id="emptyJobs" class="empty" hidden>표시할 GPU 작업이 없어요.</div>
+      </section>
+
+      <section class="events-section" aria-labelledby="eventsTitle">
+        <div class="section-head"><div><p class="eyebrow">COST LOG</p><h2 id="eventsTitle">최근 소모량 로그</h2></div><p>GPU·디스크·공인 IP·스토리지 비용을 자동 기록해요.</p></div>
+        <div id="eventList" class="event-list"></div>
       </section>
     </main>
+
+    <footer><span>Cloud GPU Runner</span><a href="/jobs">작업 상세 보기</a><a href="https://github.com/yeohj0710/cloud-gpu-runner-console">GitHub</a></footer>
+    <div id="errorToast" class="toast" role="alert" hidden></div>
     <script src="/app.js"></script>
   </body>
 </html>

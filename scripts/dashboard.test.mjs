@@ -1,0 +1,20 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const html = fs.readFileSync(path.join(root, "public", "index.html"), "utf8");
+const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
+const login = fs.readFileSync(path.join(root, "public", "login.html"), "utf8");
+assert.match(html, /전체 남은 크레딧/);
+assert.match(html, /공급자별 크레딧/);
+assert.match(html, /최근 GPU 작업/);
+assert.match(html, /최근 소모량 로그/);
+assert.doesNotMatch(html, /PubMed|Work Memory|스토리지 관리/);
+assert.match(app, /\/api\/usage/);
+assert.match(app, /\/api\/jobs/);
+assert.match(app, /instance_deleted_at/);
+assert.match(app, /public_ip_removed_at/);
+assert.match(login, /비밀번호가 올바르지 않아요/);
+console.log("dashboard contract tests passed");
+
