@@ -9,14 +9,14 @@
 - GPU servers are never persistent development machines. Finished, failed, cancelled, or timed-out jobs release the server and temporary networking resources.
 - Credentials stay in Vercel environment variables. Uploaded projects receive presigned Object Storage URLs, never provider keys.
 
-## Cloud Credit Lab
+## Cloud GPU Runner
 
 회사 클라우드 크레딧의 잔액, 비용, 저장소, 서버와 GPU 작업을 운영하는 상위 제품입니다.
 
 - 배포 UI: `public/`
 - 서버 API: `api/`
 - 클라우드 연결·원장: `lib/`
-- 운영 주소: `https://cloud-credit-lab-console.vercel.app`
+- 운영 주소: `https://cloud-gpu-runner-console.vercel.app`
 - 이전 호환 주소: `https://work-memory-ten.vercel.app`
 
 ## Work Memory
@@ -29,7 +29,7 @@
 
 ## 별도 저장소
 
-`C:\dev\cloud-credit-lab`은 초기 조사·실험·Next.js 대시보드를 보존하는 별도 저장소입니다. 현재 운영 콘솔의 소스는 `C:\dev\cloud-credit-lab-console`에 있습니다. 두 Git 저장소의 코드를 자동으로 섞거나 동시에 배포하지 않습니다.
+`C:\dev\cloud-gpu-runner`은 초기 조사·실험·Next.js 대시보드를 보존하는 별도 저장소입니다. 현재 운영 콘솔의 소스는 `C:\dev\cloud-gpu-runner-console`에 있습니다. 두 Git 저장소의 코드를 자동으로 섞거나 동시에 배포하지 않습니다.
 
 ## Legacy identifiers
 

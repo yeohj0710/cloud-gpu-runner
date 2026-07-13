@@ -35,8 +35,8 @@ export function customWorkerScript(job, baseUrl = "https://work-memory-ten.verce
 set -Eeuo pipefail
 CALLBACK='${callback}'
 LOG_URL='${log}'
-exec > >(tee /var/log/ccl-worker.log) 2>&1
-finish(){ trap - ERR; status="$1"; error="\${2:-}"; if [ -d "/workspace/${outputPath}" ] && [ -n "$(find "/workspace/${outputPath}" -mindepth 1 -print -quit)" ]; then tar -czf /tmp/result.tar.gz -C /workspace "${outputPath}"; else printf '{"status":"%s","message":"output directory is empty"}\n' "$status" >/tmp/result-status.json; tar -czf /tmp/result.tar.gz -C /tmp result-status.json; fi; curl -fsS -X PUT -H 'content-type: application/gzip' --upload-file /tmp/result.tar.gz '${output}' || true; curl -fsS -X PUT -H 'content-type: text/plain' --upload-file /var/log/ccl-worker.log "$LOG_URL" || true; printf '{"status":"%s","error":"%s"}' "$status" "$error" | curl -fsS -X POST -H 'content-type: application/json' --data-binary @- "$CALLBACK" || true; shutdown -h now || true; }
+exec > >(tee /var/log/cgr-worker.log) 2>&1
+finish(){ trap - ERR; status="$1"; error="\${2:-}"; if [ -d "/workspace/${outputPath}" ] && [ -n "$(find "/workspace/${outputPath}" -mindepth 1 -print -quit)" ]; then tar -czf /tmp/result.tar.gz -C /workspace "${outputPath}"; else printf '{"status":"%s","message":"output directory is empty"}\n' "$status" >/tmp/result-status.json; tar -czf /tmp/result.tar.gz -C /tmp result-status.json; fi; curl -fsS -X PUT -H 'content-type: application/gzip' --upload-file /tmp/result.tar.gz '${output}' || true; curl -fsS -X PUT -H 'content-type: text/plain' --upload-file /var/log/cgr-worker.log "$LOG_URL" || true; printf '{"status":"%s","error":"%s"}' "$status" "$error" | curl -fsS -X POST -H 'content-type: application/json' --data-binary @- "$CALLBACK" || true; shutdown -h now || true; }
 fail(){ code=$?; if [ "$code" = 124 ]; then finish failed "execution timeout"; else finish failed "worker failed (exit $code)"; fi; }
 trap fail ERR
 progress(){ printf '{"status":"running","stage":"%s"}' "$1" | curl -fsS --connect-timeout 15 --max-time 30 -X POST -H 'content-type: application/json' --data-binary @- "$CALLBACK"; }
@@ -53,7 +53,7 @@ progress code_extract
 ${archive === "zip" ? "python3 -m zipfile -e /tmp/code.zip /workspace" : "tar -xzf /tmp/code.tar.gz -C /workspace"}
 ${data ? `progress data_download
 curl -fL --connect-timeout 15 --max-time 3600 '${data}' -o '/workspace/input/${String(job.data_key).split("/").pop().replace(/'/g, "")}'` : "true"}
-export CCL_DATA_DIR=/workspace/input CCL_DATA_FILE='${data ? `/workspace/input/${String(job.data_key).split("/").pop().replace(/'/g, "")}` : ""}' CCL_OUTPUT_DIR=/workspace/${outputPath} CCL_JOB_ID='${job.id}'
+export CGR_DATA_DIR=/workspace/input CGR_DATA_FILE='${data ? `/workspace/input/${String(job.data_key).split("/").pop().replace(/'/g, "")}` : ""}' CGR_OUTPUT_DIR=/workspace/${outputPath} CGR_JOB_ID='${job.id}'
 WORKDIR=/workspace
 mapfile -t roots < <(find /workspace -mindepth 1 -maxdepth 1 -type d ! -name input ! -name '${outputRoot}')
 files=$(find /workspace -mindepth 1 -maxdepth 1 -type f | wc -l)
@@ -179,11 +179,11 @@ export default async function handler(request, response) {
         method: "POST",
         body: {
           instance: {
-            name: `ccl-${Date.now()}-${String(v.purpose || "job")
+            name: `cgr-${Date.now()}-${String(v.purpose || "job")
               .replace(/[^a-z0-9-]/gi, "-")
               .slice(0, 20)}`,
             description: safeInstanceDescription(
-              `Cloud Credit Lab Work Memory ${v.purpose || "GPU job"}; max ${maxMinutes} minutes`,
+              `Cloud GPU Runner Work Memory ${v.purpose || "GPU job"}; max ${maxMinutes} minutes`,
             ),
             count: 1,
             image_id: v.image_id,

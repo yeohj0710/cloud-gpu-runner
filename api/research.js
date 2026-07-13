@@ -7,7 +7,7 @@ const INDEX = "research/index.json";
 export default async function handler(req, res) {
   if (
     !(await isAuthorized(
-      new Request("https://cloud-credit-lab/api/research", {
+      new Request("https://cloud-gpu-runner/api/research", {
         headers: { cookie: req.headers.cookie || "" },
       }),
     ))

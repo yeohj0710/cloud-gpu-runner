@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Turn Cloud Credit Lab into a simple, guarded GPU workbench where a user uploads data and code, enters one command, sees the estimated maximum cost, runs it on an ephemeral Kakao GPU, and downloads logs and outputs.
+**Goal:** Turn Cloud GPU Runner into a simple, guarded GPU workbench where a user uploads data and code, enters one command, sees the estimated maximum cost, runs it on an ephemeral Kakao GPU, and downloads logs and outputs.
 
 **Architecture:** Keep durable inputs, job state, logs, and results in the existing Naver Object Storage control plane. Use the existing Kakao BCS VM API to create an NVIDIA image VM with cloud-init, execute the submitted bundle in an isolated working directory, upload a compressed output archive and log, call back with status, and shut down. The browser exposes one linear workflow and never receives cloud credentials.
 

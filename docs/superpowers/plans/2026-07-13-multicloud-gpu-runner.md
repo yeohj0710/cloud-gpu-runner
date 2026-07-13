@@ -66,8 +66,8 @@
 
 **Files:**
 - Modify: `docs/PRODUCT-BOUNDARIES.md`
-- Modify: `C:/dev/cloud-credit-lab/docs/operating-console.md`
-- Modify: `C:/dev/cloud-credit-lab/README.md`
+- Modify: `C:/dev/cloud-gpu-runner/docs/operating-console.md`
+- Modify: `C:/dev/cloud-gpu-runner/README.md`
 
 - [ ] Run syntax, contract, Python, authentication, and full repository tests.
 - [ ] Deploy production and run authenticated read-only NAVER readiness checks.

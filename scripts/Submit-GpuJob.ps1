@@ -2,7 +2,7 @@
 param(
   [Parameter(Mandatory = $true)][string]$ProjectPath,
   [string]$DataPath,
-  [string]$Command = 'pip install -r requirements.txt && python train.py --data "$CCL_DATA_FILE" --output "$CCL_OUTPUT_DIR"',
+  [string]$Command = 'pip install -r requirements.txt && python train.py --data "$CGR_DATA_FILE" --output "$CGR_OUTPUT_DIR"',
   [ValidateSet('auto', 'naver', 'kakao')][string]$Provider = 'auto',
   [ValidateRange(15, 1440)][int]$Minutes = 60,
   [ValidateRange(50, 2000)][int]$VolumeGB = 80,
@@ -13,16 +13,16 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$agentEnv = 'C:\dev\cloud-credit-lab\.env.local'
-if (-not $env:CCL_PASSWORD -and (Test-Path -LiteralPath $agentEnv)) {
-  Get-Content -LiteralPath $agentEnv | ForEach-Object { if ($_ -match '^CCL_PASSWORD=(.*)$') { $env:CCL_PASSWORD = $matches[1].Trim() } }
+$agentEnv = 'C:\dev\cloud-gpu-runner\.env.local'
+if (-not $env:CGR_PASSWORD -and (Test-Path -LiteralPath $agentEnv)) {
+  Get-Content -LiteralPath $agentEnv | ForEach-Object { if ($_ -match '^CGR_PASSWORD=(.*)$') { $env:CGR_PASSWORD = $matches[1].Trim() } }
 }
 $project = (Resolve-Path -LiteralPath $ProjectPath).Path
 if (-not (Test-Path -LiteralPath $project -PathType Container)) { throw "ProjectPath must be a folder: $project" }
 if ($DataPath) { $DataPath = (Resolve-Path -LiteralPath $DataPath).Path }
-if (-not $Password) { $Password = $env:CCL_PASSWORD }
+if (-not $Password) { $Password = $env:CGR_PASSWORD }
 if (-not $Password) {
-  $secure = Read-Host 'Cloud Credit Lab password' -AsSecureString
+  $secure = Read-Host 'Cloud GPU Runner password' -AsSecureString
   $Password = [System.Net.NetworkCredential]::new('', $secure).Password
 }
 

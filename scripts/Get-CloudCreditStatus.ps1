@@ -9,12 +9,12 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$agentEnv = 'C:\dev\cloud-credit-lab\.env.local'
-if (-not $env:CCL_PASSWORD -and (Test-Path -LiteralPath $agentEnv)) {
-  Get-Content -LiteralPath $agentEnv | ForEach-Object { if ($_ -match '^CCL_PASSWORD=(.*)$') { $env:CCL_PASSWORD = $matches[1].Trim() } }
+$agentEnv = 'C:\dev\cloud-gpu-runner\.env.local'
+if (-not $env:CGR_PASSWORD -and (Test-Path -LiteralPath $agentEnv)) {
+  Get-Content -LiteralPath $agentEnv | ForEach-Object { if ($_ -match '^CGR_PASSWORD=(.*)$') { $env:CGR_PASSWORD = $matches[1].Trim() } }
 }
-if (-not $Password) { $Password = $env:CCL_PASSWORD }
-if (-not $Password) { throw 'Set CCL_PASSWORD or pass -Password.' }
+if (-not $Password) { $Password = $env:CGR_PASSWORD }
+if (-not $Password) { throw 'Set CGR_PASSWORD or pass -Password.' }
 $session = New-Object Microsoft.PowerShell.Commands.WebRequestSession
 function Invoke-CclJson([string]$Uri, [string]$Method = 'GET', $Body = $null) {
   $args = @{ Uri = "$BaseUrl$Uri"; Method = $Method; WebSession = $session; UseBasicParsing = $true }

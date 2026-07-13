@@ -150,7 +150,7 @@ async function loadEnvironment() {
 function savePrivateKey(value) {
   if (!value) return;
   const blob = new Blob([value], { type: "application/x-pem-file" });
-  const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = "ccl-gpu.pem"; link.click(); URL.revokeObjectURL(link.href);
+  const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = "cgr-gpu.pem"; link.click(); URL.revokeObjectURL(link.href);
 }
 async function setupNaver() {
   const button = $("#setupNaver"); button.disabled = true;

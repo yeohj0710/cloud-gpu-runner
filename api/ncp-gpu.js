@@ -4,7 +4,7 @@ import { bootstrapNcpGpu, createNcpGpu, deleteNcpGpu, ncpGpuReadiness, NCP_BLOCK
 import { listJobs, updateJob } from "../lib/jobs.js";
 
 export default async function handler(request, response) {
-  if (!await isAuthorized(new Request("https://cloud-credit-lab/api/ncp-gpu", { headers: { cookie: request.headers.cookie || "" } }))) return response.status(401).json({ error: "unauthorized" });
+  if (!await isAuthorized(new Request("https://cloud-gpu-runner/api/ncp-gpu", { headers: { cookie: request.headers.cookie || "" } }))) return response.status(401).json({ error: "unauthorized" });
   try {
     if (request.method === "GET") return response.json(await ncpGpuReadiness(String(request.query?.region || "KR")));
     if (request.method !== "POST") return response.status(405).json({ error: "method_not_allowed" });
