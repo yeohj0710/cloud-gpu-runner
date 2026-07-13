@@ -9,7 +9,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$agentEnv = 'C:\dev\.cloud-credit-agent.env'
+$agentEnv = 'C:\dev\cloud-credit-lab\.env.local'
 if (-not $env:CCL_PASSWORD -and (Test-Path -LiteralPath $agentEnv)) {
   Get-Content -LiteralPath $agentEnv | ForEach-Object { if ($_ -match '^CCL_PASSWORD=(.*)$') { $env:CCL_PASSWORD = $matches[1].Trim() } }
 }
