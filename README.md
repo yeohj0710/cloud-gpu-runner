@@ -1,4 +1,10 @@
-# Cloud Credit Lab Console
+# Cloud GPU Runner
+
+NAVER Cloud와 KakaoCloud의 지급 크레딧으로 Python 학습·추론 작업을 실행하는 공용 GPU 환경입니다. 에이전트와 로컬 CLI가 기본 사용 경로이며 웹 콘솔은 상태 확인용 보조 도구입니다.
+
+- 공용 명령: `C:\dev\cloud-gpu.ps1`
+- 에이전트 규칙: `C:\dev\AGENTS.md`
+- 기존 저장소·배포 이름 `cloud-credit-lab-console`은 호환을 위해 유지합니다.
 
 카카오클라우드와 네이버클라우드 크레딧을 조회하고, 비용을 미리 계산한 뒤 실제 작업을 실행하는 비공개 운영 콘솔입니다.
 
