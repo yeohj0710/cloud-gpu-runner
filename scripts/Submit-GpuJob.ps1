@@ -8,7 +8,7 @@ param(
   [ValidateRange(50, 2000)][int]$VolumeGB = 80,
   [switch]$ApproveEstimatedCost,
   [string]$OutputPath = 'outputs',
-  [string]$BaseUrl = 'https://work-memory-ten.vercel.app',
+  [string]$BaseUrl = 'https://cloud-gpu-runner.vercel.app',
   [string]$Password
 )
 
@@ -78,7 +78,7 @@ try {
   & tar.exe -a -cf $archive --exclude=.git --exclude=.venv --exclude=node_modules --exclude=__pycache__ --exclude=etc -C $project .
   if ($LASTEXITCODE -ne 0) { throw "Project archive failed: tar exit $LASTEXITCODE" }
   $buckets = Invoke-CclJson '/api/ncp-storage?action=buckets'
-  $bucket = ($buckets.items | Where-Object { $_.name -match 'artifact|cloud-credit|work-memory' } | Select-Object -First 1).name
+  $bucket = ($buckets.items | Where-Object { $_.name -match 'artifact|cloud-gpu|work-memory' } | Select-Object -First 1).name
   if (-not $bucket) { $bucket = ($buckets.items | Select-Object -First 1).name }
   if (-not $bucket) { throw 'No NAVER Object Storage bucket is available.' }
   Write-Host "Uploading project: $project"

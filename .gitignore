@@ -11,3 +11,6 @@ output/
 
 .vercel
 .secrets/
+
+.vercel
+.env*

@@ -16,7 +16,7 @@ export default async function handler(request, response) {
     const maxMinutes = Math.min(1440, Math.max(15, Number(value.max_minutes) || 60));
     job = await updateJob(job.id, { status: "provisioning", provider: "naver", provisioning_nonce: crypto.randomUUID() });
     const requestHost = String(request.headers.host || "").toLowerCase();
-    const baseUrl = /^[a-z0-9.-]+\.vercel\.app$/.test(requestHost) ? `https://${requestHost}` : "https://work-memory-ten.vercel.app";
+    const baseUrl = /^[a-z0-9.-]+\.vercel\.app$/.test(requestHost) ? `https://${requestHost}` : "https://cloud-gpu-runner.vercel.app";
     const script = customWorkerScript({ ...job, max_minutes: maxMinutes }, baseUrl);
     let created;
     try { created = await createNcpGpu(job, {

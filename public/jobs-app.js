@@ -126,7 +126,7 @@ async function loadEnvironment() {
     api("/api/ncp-gpu").catch((error) => ({ error })),
   ]);
   bucket =
-    b.items.find((x) => /artifact|cloud-credit|work-memory/i.test(x.name))
+    b.items.find((x) => /artifact|cloud-gpu|work-memory/i.test(x.name))
       ?.name || b.items[0]?.name;
   if (!bucket) throw new Error("네이버 저장소 버킷이 없어요.");
   const flavors = (k.flavors || []).filter(

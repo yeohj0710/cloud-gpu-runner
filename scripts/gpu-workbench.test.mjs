@@ -23,7 +23,7 @@ const script = customWorkerScript({
   id: "job-1", bucket: "bucket", ...input,
   result_key: "results/a.tar.gz", log_key: "logs/a.txt", max_minutes: 60,
 });
-assert.ok(script.includes("https://work-memory-ten.vercel.app/api/worker-callback"), "worker callback must use the current protected production origin");
+assert.ok(script.includes("https://cloud-gpu-runner.vercel.app/api/worker-callback"), "worker callback must use the current protected production origin");
 for (const expected of ["timeout 60m", "CGR_DATA_DIR", "CGR_DATA_FILE", "shutdown -h now", "finish completed", "output directory is empty", "trap - ERR", "WORKDIR=/workspace", "execution timeout", "progress code_download", "progress command", "network activation timeout", "seq 1 150"]) {
   assert.ok(script.includes(expected), `worker script missing ${expected}`);
 }

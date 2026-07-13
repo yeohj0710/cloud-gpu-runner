@@ -4,7 +4,7 @@ param(
   [ValidateRange(1, 1440)][int]$Minutes = 60,
   [ValidateRange(50, 2000)][int]$VolumeGB = 80,
   [string]$Flavor,
-  [string]$BaseUrl = 'https://work-memory-ten.vercel.app',
+  [string]$BaseUrl = 'https://cloud-gpu-runner.vercel.app',
   [string]$Password
 )
 

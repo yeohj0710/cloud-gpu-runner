@@ -20,7 +20,7 @@ function workerScript(job, baseUrl) {
   return `#!/bin/bash\nset -euo pipefail\nCALLBACK='${callback}'\nLOG_URL='${log}'\nSTAGE='bootstrap'\nfail(){ code=$?; curl -fsS -X PUT -H 'content-type: text/plain' --upload-file /var/log/cloud-init-output.log "$LOG_URL" || true; curl -fsS -X POST -H 'content-type: application/json' -d "{\\"status\\":\\"failed\\",\\"error\\":\\"$STAGE failed (exit $code)\\"}" "$CALLBACK" || true; shutdown -h now; }\ntrap fail ERR\ncurl -fsS -X POST -H 'content-type: application/json' -d '{"status":"running"}' "$CALLBACK"\nSTAGE='system packages'\napt-get update\nDEBIAN_FRONTEND=noninteractive apt-get install -y python3-pip python3-venv ffmpeg curl\nSTAGE='python environment'\npython3 -m venv /opt/work-memory-venv\n/opt/work-memory-venv/bin/pip install --upgrade pip\n/opt/work-memory-venv/bin/pip install faster-whisper\nSTAGE='input download'\ncurl -fL '${input}' -o /tmp/input.media\ncat >/tmp/transcribe.py <<'PY'\nimport json\nfrom faster_whisper import WhisperModel\nm=WhisperModel('large-v3',device='cuda',compute_type='float16')\nsegments,info=m.transcribe('/tmp/input.media',language='${job.language || "ko"}',vad_filter=True)\nrows=[{'start':s.start,'end':s.end,'text':s.text.strip()} for s in segments]\nopen('/tmp/result.json','w',encoding='utf-8').write(json.dumps({'language':info.language,'duration':info.duration,'text':' '.join(x['text'] for x in rows),'segments':rows},ensure_ascii=False))\nPY\nSTAGE='whisper transcription'\n/opt/work-memory-venv/bin/python /tmp/transcribe.py\nSTAGE='result upload'\ncurl -fS -X PUT -H 'content-type: application/json' --upload-file /tmp/result.json '${output}'\nSTAGE='completion callback'\ncurl -fsS -X POST -H 'content-type: application/json' -d '{"status":"completed"}' "$CALLBACK"\nshutdown -h now\n`;
 }
 
-export function customWorkerScript(job, baseUrl = "https://work-memory-ten.vercel.app") {
+export function customWorkerScript(job, baseUrl = "https://cloud-gpu-runner.vercel.app") {
   const expiry = Math.min(604800, Math.max(21600, (Number(job.max_minutes) || 60) * 60 + 7200));
   const code = presignObject(job.bucket, job.code_key, "GET", expiry);
   const data = job.data_key ? presignObject(job.bucket, job.data_key, "GET", expiry) : "";
@@ -165,7 +165,7 @@ export default async function handler(request, response) {
         Math.max(15, Number(v.max_minutes) || 60),
       );
       const requestHost = String(request.headers.host || "").toLowerCase();
-      const baseUrl = /^[a-z0-9.-]+\.vercel\.app$/.test(requestHost) ? `https://${requestHost}` : "https://work-memory-ten.vercel.app";
+      const baseUrl = /^[a-z0-9.-]+\.vercel\.app$/.test(requestHost) ? `https://${requestHost}` : "https://cloud-gpu-runner.vercel.app";
       const rawScript = job?.type === "custom-gpu" ? customWorkerScript({ ...job, max_minutes: maxMinutes }, baseUrl) : workerScript(job, baseUrl);
       const userData = job
         ? rawScript.replace(

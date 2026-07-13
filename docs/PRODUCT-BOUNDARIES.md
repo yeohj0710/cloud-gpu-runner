@@ -16,8 +16,8 @@
 - 배포 UI: `public/`
 - 서버 API: `api/`
 - 클라우드 연결·원장: `lib/`
-- 운영 주소: `https://cloud-gpu-runner-console.vercel.app`
-- 이전 호환 주소: `https://work-memory-ten.vercel.app`
+- 운영 주소: `https://cloud-gpu-runner.vercel.app`
+- 이전 호환 주소: `https://cloud-gpu-runner.vercel.app`
 
 ## Work Memory
 
