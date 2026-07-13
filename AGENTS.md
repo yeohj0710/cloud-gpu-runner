@@ -13,3 +13,4 @@ GPU agent workflow:
 - Follow `C:\dev\AGENTS.md` for agent-native NAVER/Kakao GPU execution.
 - Use `C:\dev\cloud-credit-lab-console\scripts\Get-CloudCreditStatus.ps1` before each run.
 - Use `C:\dev\cloud-credit-lab-console\scripts\Submit-GpuJob.ps1` to submit code; the website is optional.
+- Ask for explicit user approval after showing the estimate for every GPU run; only then pass `-ApproveEstimatedCost`.
