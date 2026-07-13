@@ -46,6 +46,22 @@ cd C:\dev\cloud-credit-lab-console
 .\Start-WorkMemory.ps1
 ```
 
+## 로컬 Python 프로젝트를 GPU에서 실행
+
+키를 Python 코드에 넣지 않습니다. 로컬 폴더를 압축해 보호된 Cloud Credit Lab 제어면으로 보내면 네이버 또는 카카오 GPU가 실행하고 끝난 뒤 자동 반납합니다.
+
+```powershell
+cd C:\dev\cloud-credit-lab-console
+.\scripts\Submit-GpuJob.ps1 `
+  -ProjectPath C:\dev\my-ml-project `
+  -DataPath C:\data\train.parquet `
+  -Provider auto `
+  -Minutes 120 `
+  -Command 'pip install -r requirements.txt && python train.py --data "$CCL_DATA_FILE" --output "$CCL_OUTPUT_DIR"'
+```
+
+`auto`는 네이버 GPU가 준비돼 있으면 2026-07-31 만료 크레딧을 먼저 사용하고, 준비되지 않았으면 카카오를 사용합니다. `naver` 또는 `kakao`로 고정할 수도 있습니다.
+
 ## 테스트
 
 ```powershell

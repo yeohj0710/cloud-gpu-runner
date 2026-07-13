@@ -1,5 +1,14 @@
 # Product boundaries
 
+## Multi-cloud GPU runner
+
+- NAVER Object Storage is the shared artifact plane.
+- NAVER Cloud L4/L40S GPU and KakaoCloud NVIDIA GPU are ephemeral compute providers.
+- `auto` prioritizes a ready NAVER GPU because the earliest NAVER credit expires on 2026-07-31; it uses Kakao when NAVER prerequisites are unavailable.
+- Every job has a maximum runtime, estimated cost, actual runtime cost, completion callback, cancellation path, and scheduled timeout cleanup.
+- GPU servers are never persistent development machines. Finished, failed, cancelled, or timed-out jobs release the server and temporary networking resources.
+- Credentials stay in Vercel environment variables. Uploaded projects receive presigned Object Storage URLs, never provider keys.
+
 ## Cloud Credit Lab
 
 회사 클라우드 크레딧의 잔액, 비용, 저장소, 서버와 GPU 작업을 운영하는 상위 제품입니다.

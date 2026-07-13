@@ -21,10 +21,11 @@ function workerScript(job, baseUrl) {
 }
 
 export function customWorkerScript(job, baseUrl = "https://work-memory-ten.vercel.app") {
-  const code = presignObject(job.bucket, job.code_key, "GET", 21600);
-  const data = job.data_key ? presignObject(job.bucket, job.data_key, "GET", 21600) : "";
-  const output = presignObject(job.bucket, job.result_key, "PUT", 21600);
-  const log = presignObject(job.bucket, job.log_key, "PUT", 21600);
+  const expiry = Math.min(604800, Math.max(21600, (Number(job.max_minutes) || 60) * 60 + 7200));
+  const code = presignObject(job.bucket, job.code_key, "GET", expiry);
+  const data = job.data_key ? presignObject(job.bucket, job.data_key, "GET", expiry) : "";
+  const output = presignObject(job.bucket, job.result_key, "PUT", expiry);
+  const log = presignObject(job.bucket, job.log_key, "PUT", expiry);
   const callback = `${baseUrl}/api/worker-callback?id=${encodeURIComponent(job.id)}&token=${jobToken(job.id)}`;
   const command64 = Buffer.from(job.command, "utf8").toString("base64");
   const outputPath = String(job.output_path || "outputs");
@@ -210,6 +211,7 @@ export default async function handler(request, response) {
           await bcs("flavors?instance_type=gpu&limit=100")
         ).flavors?.find((x) => x.id === v.flavor_id);
         await updateJob(job.id, {
+          provider: "kakao",
           status: "provisioning",
           instance_id: instanceId,
           max_minutes: Math.min(1440, Math.max(15, Number(v.max_minutes) || 60)),
