@@ -67,8 +67,8 @@ type Experiment = {
 };
 
 const REQUEST_TIMEOUT_MS = 30_000;
-const RUN_TOKEN_STORAGE_KEY = "cloud-credit-run-token";
-const RUN_TOKEN_EVENT = "cloud-credit-run-token-change";
+const RUN_TOKEN_STORAGE_KEY = "cloud-gpu-run-token";
+const RUN_TOKEN_EVENT = "cloud-gpu-run-token-change";
 
 function subscribeRunToken(callback: () => void) {
   window.addEventListener("storage", callback);

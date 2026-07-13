@@ -116,7 +116,7 @@ function createProbeAction({
             method: "HEAD",
             redirect: "manual",
             signal: controller.signal,
-            headers: { "user-agent": "cloud-credit-multi-region-probe/1.0" },
+            headers: { "user-agent": "cloud-gpu-multi-region-probe/1.0" },
           });
           const latencyMs = Math.max(0, Math.round(nowMs() - startedAt));
           const expectedStatus = target.expectedStatus ?? 200;

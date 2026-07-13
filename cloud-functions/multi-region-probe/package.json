@@ -1,5 +1,5 @@
 {
-  "name": "cloud-credit-multi-region-probe",
+  "name": "cloud-gpu-multi-region-probe",
   "version": "1.0.0",
   "private": true,
   "type": "commonjs",

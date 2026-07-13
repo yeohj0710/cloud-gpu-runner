@@ -11,7 +11,7 @@
 
 ## Goal
 
-Let a user test cloud-credit use cases from a browser without exposing provider credentials to the client.
+Let a user test cloud-gpu use cases from a browser without exposing provider credentials to the client.
 
 ## Setup
 

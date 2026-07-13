@@ -11,7 +11,7 @@
 
 ## Goal
 
-Add a low-friction way to check current monthly billing totals before and after small cloud-credit experiments.
+Add a low-friction way to check current monthly billing totals before and after small cloud-gpu experiments.
 
 ## Setup
 

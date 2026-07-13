@@ -1,4 +1,4 @@
-# Cloud Credit Dashboard
+# Cloud GPU Dashboard
 
 확정 크레딧보다 **지금 지출을 승인할 근거**를 먼저 보여주는 Next.js App Router 대시보드입니다.
 

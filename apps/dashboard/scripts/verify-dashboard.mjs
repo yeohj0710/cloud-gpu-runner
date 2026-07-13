@@ -65,7 +65,7 @@ async function verifyInBrowser() {
       }
 
       await page.addInitScript((token) => {
-        window.localStorage.setItem("cloud-credit-run-token", token);
+        window.localStorage.setItem("cloud-gpu-run-token", token);
       }, runToken);
     }
 

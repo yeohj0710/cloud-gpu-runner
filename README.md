@@ -2,7 +2,7 @@
 
 네이버클라우드와 카카오클라우드의 지급 크레딧으로 Python 학습·추론 작업을 실행하는 공용 GPU 프로젝트입니다. 비용 산정, 실행 승인, 코드·데이터 제출, 자동 반납, 사용액 기록을 한 흐름으로 제공합니다. GPU 작업은 `C:\dev\cloud-gpu-runner\scripts\cloud-gpu.ps1`과 이 저장소의 `AGENTS.md`를 사용합니다.
 
-> **저장소 역할:** 이 저장소는 크레딧 활용안의 조사·판정·실험 기록입니다. 실제 로그인, 비용 원장, Object Storage, GPU 실행과 Work Memory 전사를 제공하는 운영 콘솔은 [Cloud GPU Runner Console](https://cloud-gpu-runner-console.vercel.app)이며 현재 소스는 [yeohj0710/cloud-gpu-runner-console](https://github.com/yeohj0710/cloud-gpu-runner-console)에 있습니다. 이전 `work-memory-ten.vercel.app` 주소는 호환 alias로만 유지합니다.
+> **저장소 역할:** 이 저장소는 크레딧 활용안의 조사·판정·실험 기록입니다. 실제 로그인, 비용 원장, Object Storage, GPU 실행과 Work Memory 전사를 제공하는 운영 콘솔은 [Cloud GPU Runner Console](https://cloud-gpu-runner.vercel.app)이며 현재 소스는 [yeohj0710/cloud-gpu-runner-console](https://github.com/yeohj0710/cloud-gpu-runner-console)에 있습니다. 이전 `cloud-gpu-runner.vercel.app` 주소는 호환 alias로만 유지합니다.
 
 네이버·카카오 크레딧을 **GPT가 대신할 수 없는 클라우드 능력**에만 쓰기 위한 실험 저장소입니다.
 

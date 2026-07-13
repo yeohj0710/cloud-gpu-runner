@@ -11,7 +11,7 @@ export function HEAD() {
 
 export function GET() {
   return NextResponse.json(
-    { ok: true, service: "cloud-credit-dashboard" },
+    { ok: true, service: "cloud-gpu-dashboard" },
     { headers: { "cache-control": "no-store" } },
   );
 }

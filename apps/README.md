@@ -2,7 +2,7 @@
 
 ## `apps/dashboard`
 
-Next.js App Router dashboard for safe cloud-credit experiments.
+Next.js App Router dashboard for safe cloud-gpu experiments.
 
 - Browser UI sends actions to server API routes.
 - NCP/Kakao credentials stay in server-side environment variables.

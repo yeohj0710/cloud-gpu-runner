@@ -51,7 +51,7 @@ function buildPlan(config, configPath) {
     targetIds: config.targets.map((target) => target.id),
     deployments: config.regions.map((region) => ({
       region,
-      actionName: `cloud-credit-uptime-${region.toLowerCase()}`,
+      actionName: `cloud-gpu-uptime-${region.toLowerCase()}`,
       trigger: "cron",
       params: { region },
       targetBinding: "cloud-functions/multi-region-probe/targets.json",

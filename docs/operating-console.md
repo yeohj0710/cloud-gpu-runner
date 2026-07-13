@@ -4,7 +4,7 @@
 - **운영 콘솔 (`cloud-gpu-runner-console` 저장소)**: 인증된 웹 UI, 실제 공급자 API, 비용 원장, 저장소, 네이버·카카오 GPU 실행
 - **Work Memory**: 운영 콘솔 안에서 GPU 크레딧을 사용하는 녹화·음성 검색 모듈
 
-운영 주소: https://work-memory-ten.vercel.app
+운영 주소: https://cloud-gpu-runner.vercel.app
 
 ## 2026-07-13 GPU 운영 결정
 
@@ -14,4 +14,4 @@
 - 작업마다 최대 실행시간과 예상 비용을 표시하고, 완료·실패·취소·시간초과 때 서버와 임시 네트워크 자원을 자동 반납합니다.
 - 로컬 프로젝트에는 클라우드 키를 넣지 않습니다. `Submit-GpuJob.ps1`이 보호된 운영 콘솔에 프로젝트를 제출합니다.
 
-이전 `work-memory-ten.vercel.app` alias는 먼저 만들어진 Work Memory 앱에서 운영 콘솔이 확장된 흔적입니다. 사용자 화면, GitHub 저장소와 Vercel 프로젝트는 Cloud GPU Runner Console로 통일했고, 이전 alias만 기존 북마크 호환을 위해 유지합니다.
+이전 `cloud-gpu-runner.vercel.app` alias는 먼저 만들어진 Work Memory 앱에서 운영 콘솔이 확장된 흔적입니다. 사용자 화면, GitHub 저장소와 Vercel 프로젝트는 Cloud GPU Runner Console로 통일했고, 이전 alias만 기존 북마크 호환을 위해 유지합니다.
