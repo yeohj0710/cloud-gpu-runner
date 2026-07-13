@@ -7,8 +7,9 @@
     <title>GPU 크레딧 현황 | Cloud GPU Runner</title>
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="/dashboard.css" />
+    <link rel="stylesheet" href="/dashboard-improvements.css" />
   </head>
-  <body>
+  <body class="loading">
     <header class="topbar">
       <a class="brand" href="/" aria-label="Cloud GPU Runner 홈"><span>C</span>Cloud GPU Runner</a>
       <div class="top-actions"><span class="live"><i></i> 운영 중</span><button id="refresh" type="button">새로고침</button><button id="logout" type="button">로그아웃</button></div>
@@ -19,13 +20,14 @@
         <p class="eyebrow">GPU CREDIT</p>
         <div class="hero-row">
           <div><h1 id="pageTitle">GPU 크레딧을<br />한눈에 확인하세요</h1><p class="intro">두 클라우드의 남은 크레딧과 작업별 사용 내역, 자원 반납 상태를 한 화면에서 확인할 수 있어요.</p></div>
-          <div class="total"><span>전체 남은 크레딧</span><strong id="totalRemaining">—</strong><small id="updatedAt">불러오는 중</small></div>
+          <div class="total"><span>전체 남은 크레딧</span><strong id="totalRemaining" class="skeleton-text">15,000,000원</strong><small id="updatedAt">실제 데이터를 확인하고 있어요</small></div>
         </div>
       </section>
 
       <section class="providers" aria-labelledby="providerTitle">
         <div class="section-head"><div><p class="eyebrow">BALANCE</p><h2 id="providerTitle">공급자별 크레딧</h2></div><p>VAT 별도 · 실제 청구액과 실행 로그 기준</p></div>
-        <div id="providerCards" class="provider-grid" aria-live="polite"></div>
+        <div id="providerCards" class="provider-grid" aria-live="polite"><article class="provider-card skeleton-card"></article><article class="provider-card skeleton-card"></article></div>
+        <p class="source-note"><b>데이터 출처</b> NAVER는 Billing API와 Runner 장부를 대조하고, Kakao는 Runner가 기록한 실제 GPU·디스크·공인 IP 사용량을 합산해요. 지급 크레딧은 계약상 부여액을 설정한 값이에요.</p>
       </section>
 
       <section class="usage-band" aria-labelledby="usageTitle">
@@ -37,13 +39,13 @@
 
       <section class="jobs-section" aria-labelledby="jobsTitle">
         <div class="section-head"><div><p class="eyebrow">GPU JOBS</p><h2 id="jobsTitle">최근 GPU 작업</h2></div><div class="filter" role="group" aria-label="작업 필터"><button class="active" data-filter="all">전체</button><button data-filter="running">실행 중</button><button data-filter="completed">완료</button><button data-filter="failed">실패</button></div></div>
-        <div class="table-wrap"><table><thead><tr><th>작업</th><th>공급자</th><th>상태</th><th>실행시간</th><th>실제 비용</th><th>자원 반납</th><th>시작 시각</th></tr></thead><tbody id="jobRows"></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th>무엇을 했나요?</th><th>공급자</th><th>상태</th><th>실행시간</th><th>실제 비용</th><th>자원 반납</th><th>시작 시각</th></tr></thead><tbody id="jobRows"></tbody></table></div>
         <div id="jobCards" class="job-cards"></div>
         <div id="emptyJobs" class="empty" hidden>표시할 GPU 작업이 없어요.</div>
       </section>
 
       <section class="events-section" aria-labelledby="eventsTitle">
-        <div class="section-head"><div><p class="eyebrow">COST LOG</p><h2 id="eventsTitle">최근 소모량 로그</h2></div><p>GPU·디스크·공인 IP·스토리지 비용을 자동 기록해요.</p></div>
+        <div class="section-head"><div><p class="eyebrow">COST LOG</p><h2 id="eventsTitle">의미 있는 비용 기록</h2></div><p id="eventSummary">GPU 실행비 중심으로 보여드려요.</p></div>
         <div id="eventList" class="event-list"></div>
       </section>
     </main>
