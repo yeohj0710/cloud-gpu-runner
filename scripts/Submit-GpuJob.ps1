@@ -6,6 +6,7 @@ param(
   [ValidateSet('auto', 'naver', 'kakao')][string]$Provider = 'auto',
   [ValidateRange(15, 1440)][int]$Minutes = 60,
   [ValidateRange(50, 2000)][int]$VolumeGB = 80,
+  [switch]$ApproveEstimatedCost,
   [string]$OutputPath = 'outputs',
   [string]$BaseUrl = 'https://work-memory-ten.vercel.app',
   [string]$Password
@@ -35,6 +36,30 @@ function Invoke-CclJson([string]$Uri, [string]$Method = 'GET', $Body = $null) {
 
 $null = Invoke-CclJson '/api/login' 'POST' @{ password = $Password }
 $credit = Invoke-CclJson '/api/usage'
+$naver = $null
+try { $naver = Invoke-CclJson '/api/ncp-gpu' } catch { if ($Provider -eq 'naver') { throw } }
+$resolved = if ($Provider -eq 'auto') { if ($naver -and $naver.ok) { 'naver' } else { 'kakao' } } else { $Provider }
+if ($resolved -eq 'naver') {
+  if (-not $naver.ok) { throw "NAVER GPU is not ready: $($naver.missing -join ', ')" }
+  $spec = $naver.specs | Sort-Object hourly_rate | Select-Object -First 1
+  $launch = $naver.launch_configs | Select-Object -First 1
+  $estimate = Invoke-CclJson '/api/estimate?type=gpu' 'POST' @{ provider = 'naver'; flavor = $spec.serverSpecCode; minutes = $Minutes; volume_gb = 50 }
+  $remaining = $credit.remaining.naver
+  $selectedGpu = $spec.serverSpecCode
+} else {
+  $kakao = Invoke-CclJson '/api/cloud?action=readiness'
+  if (-not $kakao.ok) { throw 'Kakao GPU is not ready.' }
+  $flavor = $kakao.flavors | Where-Object { $_.manufacturer -eq 'nvidia' -and $kakao.pricing.gpu_hourly.PSObject.Properties[$_.name].Value } | Sort-Object { $kakao.pricing.gpu_hourly.PSObject.Properties[$_.name].Value } | Select-Object -First 1
+  $image = $kakao.images | Where-Object { $_.name -match 'nvidia' } | Select-Object -First 1
+  $estimate = Invoke-CclJson '/api/estimate?type=gpu' 'POST' @{ provider = 'kakao'; flavor = $flavor.name; minutes = $Minutes; volume_gb = $VolumeGB }
+  $remaining = $credit.remaining.kakao
+  $selectedGpu = $flavor.name
+}
+Write-Host ("Provider: {0}; GPU: {1}; maximum runtime: {2} minutes" -f $resolved, $selectedGpu, $Minutes)
+Write-Host ("Estimated maximum cost: {0:N0} KRW + VAT; estimated credit remaining: {1:N0} KRW" -f $estimate.total, $remaining)
+if (-not $ApproveEstimatedCost) {
+  throw 'Cost approval required. Ask the user to approve this estimate, then rerun with -ApproveEstimatedCost.'
+}
 $etc = Join-Path (Split-Path -Parent $PSScriptRoot) 'etc'
 New-Item -ItemType Directory -Force -Path $etc | Out-Null
 $archive = Join-Path $etc ("gpu-project-{0}.zip" -f [guid]::NewGuid().ToString('N'))
@@ -61,22 +86,9 @@ try {
   $dataKey = if ($DataPath) { Write-Host "Uploading data: $DataPath"; Send-CclFile $DataPath $bucket } else { '' }
   $created = Invoke-CclJson '/api/jobs' 'POST' @{ type = 'custom-gpu'; provider = $Provider; bucket = $bucket; code_key = $codeKey; data_key = $dataKey; command = $Command; output_path = $OutputPath }
 
-  $naver = $null
-  try { $naver = Invoke-CclJson '/api/ncp-gpu' } catch { if ($Provider -eq 'naver') { throw } }
-  $resolved = if ($Provider -eq 'auto') { if ($naver -and $naver.ok) { 'naver' } else { 'kakao' } } else { $Provider }
   if ($resolved -eq 'naver') {
-    if (-not $naver.ok) { throw "NAVER GPU is not ready: $($naver.missing -join ', ')" }
-    $spec = $naver.specs | Sort-Object hourly_rate | Select-Object -First 1
-    $launch = $naver.launch_configs | Select-Object -First 1
-    $estimate = Invoke-CclJson '/api/estimate?type=gpu' 'POST' @{ provider = 'naver'; flavor = $spec.serverSpecCode; minutes = $Minutes; volume_gb = 50 }
-    Write-Host ("NAVER estimate: {0:N0} KRW (credit remaining before run: {1:N0} KRW)" -f $estimate.total, $credit.remaining.naver)
     $null = Invoke-CclJson '/api/ncp-gpu' 'POST' @{ job_id = $created.job.id; spec_code = $spec.serverSpecCode; vpc_no = $launch.vpc_no; subnet_no = $launch.subnet_no; login_key_name = $naver.keys[0].loginKeyName; acg_no = $launch.acg_no; max_minutes = $Minutes; volume_gb = 50 }
   } else {
-    $kakao = Invoke-CclJson '/api/cloud?action=readiness'
-    $flavor = $kakao.flavors | Where-Object { $_.manufacturer -eq 'nvidia' -and $kakao.pricing.gpu_hourly.PSObject.Properties[$_.name].Value } | Sort-Object { $kakao.pricing.gpu_hourly.PSObject.Properties[$_.name].Value } | Select-Object -First 1
-    $image = $kakao.images | Where-Object { $_.name -match 'nvidia' } | Select-Object -First 1
-    $estimate = Invoke-CclJson '/api/estimate?type=gpu' 'POST' @{ provider = 'kakao'; flavor = $flavor.name; minutes = $Minutes; volume_gb = $VolumeGB }
-    Write-Host ("KAKAO estimate: {0:N0} KRW (credit remaining before run: {1:N0} KRW)" -f $estimate.total, $credit.remaining.kakao)
     $null = Invoke-CclJson '/api/cloud?action=create' 'POST' @{ job_id = $created.job.id; purpose = 'local-project'; flavor_id = $flavor.id; image_id = $image.id; subnet_id = $kakao.subnets[0].id; key_name = $kakao.keypairs[0].name; security_group = $kakao.security_groups[0].name; max_minutes = $Minutes; volume_gb = $VolumeGB }
   }
   Write-Host "Started $resolved GPU job: $($created.job.id)"
