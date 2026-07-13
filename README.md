@@ -1,9 +1,31 @@
 # Cloud GPU Runner
 
+## Any-project Codex entrypoint
+
+이 저장소는 특정 애플리케이션에 종속되지 않는 NAVER/Kakao GPU 실행 백엔드다. 다른 프로젝트에서 Codex에 아래 한 문장으로 요청할 수 있다.
+
+```text
+C:\dev\cloud-gpu-runner-console 활용해서 학습 진행해
+```
+
+Codex는 대상 프로젝트 구조와 비민감 샘플을 분석하고, 로컬 검증 후 업로드·실행·완료 대기·결과 회수·GPU 반납 검증을 수행한다. 별도 조건이 없으면 GPU 1개, 최대 60분, 예상 비용 2,000원(VAT 별도)까지만 승인한 것으로 취급한다. NAVER를 먼저 사용하고 준비되지 않았을 때 Kakao로 전환한다. 범위를 넘으면 실행 전에 추가 승인을 받는다.
+
+```powershell
+& 'C:\dev\cloud-gpu-runner-console\scripts\cloud-gpu.ps1' status
+
+& 'C:\dev\cloud-gpu-runner-console\scripts\cloud-gpu.ps1' run `
+  -ProjectPath 'C:\dev\some-project' `
+  -Command 'pip install -r requirements.txt && python train.py' `
+  -Provider auto -Minutes 60 -MaxEstimatedCostKRW 2000 `
+  -ApproveEstimatedCost
+```
+
+증거는 기본적으로 대상 프로젝트의 `artifacts\cloud-gpu\<job-id>\`에 저장된다. `job.json`에는 공급자, 예상/실제 비용, 실행시간, 잔액, 자원 반납 상태가 기록되며 가능한 경우 `run.log`와 `result.tar.gz`도 저장된다.
+
 NAVER Cloud와 KakaoCloud의 지급 크레딧으로 Python 학습·추론 작업을 실행하는 공용 GPU 환경입니다. 에이전트와 로컬 CLI가 기본 사용 경로이며 웹 콘솔은 상태 확인용 보조 도구입니다.
 
-- 공용 명령: `C:\dev\cloud-gpu-runner\scripts\cloud-gpu.ps1`
-- 에이전트 규칙: `C:\dev\cloud-gpu-runner\AGENTS.md`
+- 공용 명령: `C:\dev\cloud-gpu-runner-console\scripts\cloud-gpu.ps1`
+- 에이전트 규칙: `C:\dev\cloud-gpu-runner-console\AGENTS.md`
 - 실행 백엔드 저장소와 Vercel 프로젝트 이름은 `cloud-gpu-runner-console`입니다.
 
 카카오클라우드와 네이버클라우드 크레딧을 조회하고, 비용을 미리 계산한 뒤 실제 작업을 실행하는 비공개 운영 콘솔입니다.

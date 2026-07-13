@@ -9,9 +9,12 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$agentEnv = 'C:\dev\cloud-gpu-runner\.env.local'
-if (-not $env:CGR_PASSWORD -and (Test-Path -LiteralPath $agentEnv)) {
-  Get-Content -LiteralPath $agentEnv | ForEach-Object { if ($_ -match '^CGR_PASSWORD=(.*)$') { $env:CGR_PASSWORD = $matches[1].Trim() } }
+$root = Split-Path -Parent $PSScriptRoot
+$agentEnvs = @((Join-Path $root '.env.local'), 'C:\dev\cloud-gpu-runner\.env.local')
+foreach ($agentEnv in $agentEnvs) {
+  if (-not $env:CGR_PASSWORD -and (Test-Path -LiteralPath $agentEnv)) {
+    Get-Content -LiteralPath $agentEnv | ForEach-Object { if ($_ -match '^CGR_PASSWORD=(.*)$') { $env:CGR_PASSWORD = $matches[1].Trim() } }
+  }
 }
 if (-not $Password) { $Password = $env:CGR_PASSWORD }
 if (-not $Password) { throw 'Set CGR_PASSWORD or pass -Password.' }
