@@ -141,12 +141,12 @@ export async function runObjectStorageSmoke(env: LabEnv): Promise<ObjectStorageR
   }
 
   const host = new URL(endpoint).host;
-  const bucketName = `cloud-credit-lab-${new Date()
+  const bucketName = `cloud-gpu-runner-${new Date()
     .toISOString()
     .slice(0, 10)
     .replaceAll("-", "")}-${randomBytes(3).toString("hex")}`;
   const objectName = "smoke-test.txt";
-  const objectBody = `cloud-credit-lab object storage smoke test\ncreated=${new Date().toISOString()}\n`;
+  const objectBody = `cloud-gpu-runner object storage smoke test\ncreated=${new Date().toISOString()}\n`;
   const steps: NcpStep[] = [];
   let bucketCreated = false;
   let objectCreated = false;

@@ -61,13 +61,13 @@ test("parseArgs keeps uploads in dry-run mode by default", () => {
       "--provider",
       "naver",
       "--project",
-      "cloud-credit-lab",
+      "cloud-gpu-runner",
       "--source",
       "apps/dashboard/src/data/credit-portfolio.json",
     ]),
     {
       provider: "naver",
-      project: "cloud-credit-lab",
+      project: "cloud-gpu-runner",
       source: "apps/dashboard/src/data/credit-portfolio.json",
       execute: false,
       createBucket: false,
@@ -86,14 +86,14 @@ test("providerConfig uses the canonical Kakao artifact bucket variable", () => {
 test("createPublishPlan calculates a digest without exposing credentials", async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "artifact-plan-"));
   const devRoot = path.join(tempDir, "dev");
-  const source = path.join(devRoot, "cloud-credit-lab", "report.json");
+  const source = path.join(devRoot, "cloud-gpu-runner", "report.json");
 
   await mkdir(path.dirname(source), { recursive: true });
   await writeFile(source, '{"ok":true}', "utf8");
 
   const plan = await createPublishPlan({
     provider: "naver",
-    project: "cloud-credit-lab",
+    project: "cloud-gpu-runner",
     source,
     devRoot,
     bucket: "private-artifacts",
@@ -106,14 +106,14 @@ test("createPublishPlan calculates a digest without exposing credentials", async
   assert.equal(plan.sizeBytes, 11);
   assert.equal(plan.contentScanned, true);
   assert.match(plan.sha256, /^[a-f0-9]{64}$/);
-  assert.match(plan.objectKey, /^projects\/cloud-credit-lab\/2026-07-10\/[a-f0-9]{12}-report\.json$/);
+  assert.match(plan.objectKey, /^projects\/cloud-gpu-runner\/2026-07-10\/[a-f0-9]{12}-report\.json$/);
   assert.equal(JSON.stringify(plan).includes("secret"), false);
 });
 
 test("createPublishPlan rejects embedded secret assignments", async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "artifact-secret-"));
   const devRoot = path.join(tempDir, "dev");
-  const source = path.join(devRoot, "cloud-credit-lab", "report.json");
+  const source = path.join(devRoot, "cloud-gpu-runner", "report.json");
   const sensitiveLine = ["DASHBOARD_RUN", "_TOKEN=abcdefghijklmnop"].join("");
 
   await mkdir(path.dirname(source), { recursive: true });
@@ -122,7 +122,7 @@ test("createPublishPlan rejects embedded secret assignments", async () => {
   await assert.rejects(
     createPublishPlan({
       provider: "naver",
-      project: "cloud-credit-lab",
+      project: "cloud-gpu-runner",
       source,
       devRoot,
       bucket: "private-artifacts",
@@ -143,7 +143,7 @@ test("verifyPublishedArtifact proves a remote object matches its expected SHA-25
       secretKey: "test-secret",
     },
     bucket: "private-artifacts",
-    objectKey: "projects/cloud-credit-lab/2026-07-10/6ec078c7b2b2-report.json",
+    objectKey: "projects/cloud-gpu-runner/2026-07-10/6ec078c7b2b2-report.json",
     expectedSha256,
     maxBytes: 1024,
     fetchImpl: async () => ({
@@ -171,7 +171,7 @@ test("verifyPublishedArtifact rejects hash mismatches and oversized downloads", 
       secretKey: "test-secret",
     },
     bucket: "private-artifacts",
-    objectKey: "projects/cloud-credit-lab/2026-07-10/expected-report.json",
+    objectKey: "projects/cloud-gpu-runner/2026-07-10/expected-report.json",
     expectedSha256: "a".repeat(64),
   };
 

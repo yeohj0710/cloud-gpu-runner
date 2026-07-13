@@ -58,12 +58,12 @@ const accessKey = env.NCP_OBJECT_STORAGE_ACCESS_KEY_ID;
 const secretKey = env.NCP_OBJECT_STORAGE_SECRET_KEY;
 const service = "s3";
 const requestType = "aws4_request";
-const bucketName = `cloud-credit-lab-${new Date()
+const bucketName = `cloud-gpu-runner-${new Date()
   .toISOString()
   .slice(0, 10)
   .replaceAll("-", "")}-${randomBytes(3).toString("hex")}`;
 const objectName = "smoke-test.txt";
-const objectBody = `cloud-credit-lab object storage smoke test\ncreated=${new Date().toISOString()}\n`;
+const objectBody = `cloud-gpu-runner object storage smoke test\ncreated=${new Date().toISOString()}\n`;
 
 function sha256Hex(value) {
   return createHash("sha256").update(value).digest("hex");

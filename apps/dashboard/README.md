@@ -13,7 +13,7 @@
 ## 로컬 실행과 검증
 
 ```powershell
-cd C:\dev\cloud-credit-lab\apps\dashboard
+cd C:\dev\cloud-gpu-runner\apps\dashboard
 npm install
 npm run dev
 npm run lint

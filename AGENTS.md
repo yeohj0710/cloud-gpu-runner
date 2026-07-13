@@ -1,6 +1,6 @@
 # Agent Notes
 
-This repo is a cloud-credit experiment workspace.
+This repo is the Cloud GPU Runner control repository. It also preserves the original credit research and experiment history.
 
 Rules:
 - Do not commit or print real API keys.
@@ -12,7 +12,7 @@ Rules:
 GPU agent workflow:
 - This environment is named **Cloud GPU Runner**. It uses granted NAVER Cloud and KakaoCloud credits for bounded GPU workloads.
 - Never copy cloud keys into source, prompts, logs, commits, or other projects. Credentials stay in this repository's ignored `.env.local` and the protected backend.
-- Before every GPU run, execute `powershell -NoProfile -ExecutionPolicy Bypass -File C:\dev\cloud-credit-lab\scripts\cloud-gpu.ps1 status -Provider <naver|kakao> -Minutes <minutes>`.
+- Before every GPU run, execute `powershell -NoProfile -ExecutionPolicy Bypass -File C:\dev\cloud-gpu-runner\scripts\cloud-gpu.ps1 status -Provider <naver|kakao> -Minutes <minutes>`.
 - Show the estimated maximum cost and remaining credit, then ask the user for fresh explicit approval.
 - Do not upload code/data or create resources before approval. After approval, use `cloud-gpu.ps1 run ... -ApproveEstimatedCost`.
 - Prefer NAVER until its 2026-07-31 credit expires; use Kakao when NAVER is unavailable or Kakao hardware is more suitable.

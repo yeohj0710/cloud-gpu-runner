@@ -5,12 +5,12 @@ param(
   [ValidateRange(1, 1440)][int]$Minutes = 60,
   [string]$ProjectPath,
   [string]$DataPath,
-  [string]$Command = 'pip install -r requirements.txt && python train.py --data "$CCL_DATA_FILE" --output "$CCL_OUTPUT_DIR"',
+  [string]$Command = 'pip install -r requirements.txt && python train.py --data "$CGR_DATA_FILE" --output "$CGR_OUTPUT_DIR"',
   [switch]$ApproveEstimatedCost
 )
 
 $ErrorActionPreference = 'Stop'
-$runner = 'C:\dev\cloud-credit-lab-console\scripts'
+$runner = 'C:\dev\cloud-gpu-runner-console\scripts'
 if ($Action -eq 'status') {
   $statusProvider = if ($Provider -eq 'auto') { 'naver' } else { $Provider }
   & "$runner\Get-CloudCreditStatus.ps1" -Provider $statusProvider -Minutes $Minutes

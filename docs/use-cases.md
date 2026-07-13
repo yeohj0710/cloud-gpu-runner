@@ -22,7 +22,7 @@
 
 - `wellnessbox-rnd`의 비민감 평가 보고서와 release manifest
 - `studyforge`, `window-back-recorder`의 공개 release checksum/manifest
-- `cloud-credit-lab`의 결정 원장
+- `cloud-gpu-runner`의 결정 원장
 
 금지 대상:
 

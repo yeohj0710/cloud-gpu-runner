@@ -279,7 +279,7 @@ export function DashboardConsole({ initialConfig }: { initialConfig: ConfigStatu
             <Sparkles size={24} />
           </div>
           <div>
-            <p className="eyebrow">Cloud Credit Lab</p>
+            <p className="eyebrow">Cloud GPU Runner</p>
             <h2 id="console-title">연결 실험 콘솔</h2>
           </div>
         </div>

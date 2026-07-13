@@ -86,7 +86,7 @@ Run:
 
 ```powershell
 npm run artifact:test
-npm run artifact:publish -- --provider naver --project cloud-credit-lab --source apps/dashboard/src/data/credit-portfolio.json
+npm run artifact:publish -- --provider naver --project cloud-gpu-runner --source apps/dashboard/src/data/credit-portfolio.json
 ```
 
 Expected: all tests pass; dry-run prints provider, bucket readiness, object key, digest, size, and cost guardrail without uploading.
@@ -181,7 +181,7 @@ Document bucket privacy, object key shape, exact commands, cost cap, result, and
 ### Task 6: Review, push, and deploy
 
 **Files:**
-- Review all tracked changes in `C:\dev\cloud-credit-lab`
+- Review all tracked changes in `C:\dev\cloud-gpu-runner`
 
 - [ ] **Step 1: Run fresh verification**
 
@@ -193,14 +193,14 @@ Check requirement coverage, server-only secret handling, persistent-resource gua
 
 - [ ] **Step 3: Commit and push**
 
-Commit all relevant cloud-credit-lab changes with a concise conventional commit, then push the current branch to its configured origin.
+Commit all relevant cloud-gpu-runner changes with a concise conventional commit, then push the current branch to its configured origin.
 
 - [ ] **Step 4: Deploy a Vercel preview**
 
 Run:
 
 ```powershell
-vercel deploy C:\dev\cloud-credit-lab\apps\dashboard -y
+vercel deploy C:\dev\cloud-gpu-runner\apps\dashboard -y
 ```
 
 Expected: a preview URL. Do not promote to production without an explicit production request.

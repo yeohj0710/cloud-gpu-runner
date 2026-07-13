@@ -7,7 +7,7 @@
 - Status: completed
 - Date: 2026-05-13, retested 2026-07-10
 - Cost cap: Tier 1, <= 1,000 KRW
-- Related project/path: `C:\dev\cloud-credit-lab`
+- Related project/path: `C:\dev\cloud-gpu-runner`
 
 ## Goal
 

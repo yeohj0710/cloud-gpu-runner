@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Cloud Credit Lab · 크레딧 활용 대시보드",
+  title: "Cloud GPU Runner · 크레딧 활용 대시보드",
   description: "네이버·카카오 클라우드 크레딧을 프로젝트 성과로 바꾸는 실행 대시보드",
 };
 

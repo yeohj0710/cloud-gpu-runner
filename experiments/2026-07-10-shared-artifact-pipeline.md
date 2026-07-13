@@ -7,7 +7,7 @@
 - Status: completed
 - Date: 2026-07-10
 - Cost cap: one private object, <= 1,000 KRW guardrail
-- Related project/path: `C:\dev\cloud-credit-lab`
+- Related project/path: `C:\dev\cloud-gpu-runner`
 
 ## Goal
 
@@ -25,15 +25,15 @@ Give projects under `C:\dev` one safe path for keeping evaluation reports and ge
   - `apps/dashboard/src/data/credit-portfolio.json`, 16,029 bytes
   - SHA-256: `7638e969d8ae40fded3624662a6023c6244a31226e0e00f652168a013f2406c1`
 - Minimal verification path:
-  - `npm run artifact:publish -- --provider naver --project cloud-credit-lab --source apps/dashboard/src/data/credit-portfolio.json`
-  - `npm run artifact:publish:execute -- --provider naver --project cloud-credit-lab --source apps/dashboard/src/data/credit-portfolio.json`
+  - `npm run artifact:publish -- --provider naver --project cloud-gpu-runner --source apps/dashboard/src/data/credit-portfolio.json`
+  - `npm run artifact:publish:execute -- --provider naver --project cloud-gpu-runner --source apps/dashboard/src/data/credit-portfolio.json`
 
 ## Result
 
 - What worked:
   - Dry-run printed the source, content hash, object key, size, and cost guardrail without credentials.
   - Execute mode created one private bucket and uploaded the JSON object with HTTP 200.
-  - The latest object key is content-addressed: `projects/cloud-credit-lab/2026-07-10/7638e969d8ae-credit-portfolio.json`.
+  - The latest object key is content-addressed: `projects/cloud-gpu-runner/2026-07-10/7638e969d8ae-credit-portfolio.json`.
   - Running the same execute command again detected the existing object and skipped the upload.
   - A signed private GET streamed 16,029 bytes with a hard size cap and matched the expected SHA-256 exactly.
 - What failed:

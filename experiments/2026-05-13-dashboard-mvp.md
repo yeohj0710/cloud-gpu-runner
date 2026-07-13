@@ -7,7 +7,7 @@
 - Status: done
 - Date: 2026-05-13
 - Cost cap: 0 KRW for app verification; NCP metadata and billing read calls only
-- Related project/path: `C:\dev\cloud-credit-lab\apps\dashboard`
+- Related project/path: `C:\dev\cloud-gpu-runner\apps\dashboard`
 
 ## Goal
 

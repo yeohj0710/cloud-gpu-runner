@@ -7,7 +7,7 @@
 - Status: done
 - Date: 2026-05-13
 - Cost cap: 0 KRW
-- Related project/path: `C:\dev\cloud-credit-lab`
+- Related project/path: `C:\dev\cloud-gpu-runner`
 
 ## Goal
 
