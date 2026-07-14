@@ -58,7 +58,7 @@ test("accepts a bounded portfolio whose approved work is cloud-exclusive", () =>
 
 test("validates the deployed schema v2 portfolio", () => {
   const portfolio = JSON.parse(
-    readFileSync("apps/dashboard/src/data/credit-portfolio.json", "utf8"),
+    readFileSync("data/credit-portfolio.json", "utf8"),
   );
 
   assert.doesNotThrow(() => validateCloudNativePortfolio(portfolio));

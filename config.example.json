@@ -1,0 +1,13 @@
+{
+  "capture_root": "C:\\dev\\company-work-capture\\data",
+  "database_path": "data/work-memory.db",
+  "host": "127.0.0.1",
+  "port": 8765,
+  "retention_days": 7,
+  "session_gap_minutes": 12,
+  "excluded_apps": ["1Password.exe", "KeePass.exe", "CredentialUIBroker.exe"],
+  "excluded_title_keywords": ["비밀번호", "password", "인증번호", "카드번호"],
+  "employee": {"id": "local-user", "display_name": "내 PC"},
+  "gpu": {"provider": "kakao-cloud", "max_runtime_minutes": 240, "max_frames": 5000}
+}
+

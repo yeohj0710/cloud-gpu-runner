@@ -17,7 +17,7 @@ KakaoCloud의 20,000,000원 프로그램 선정액과 10,000,000원 발급액을
 - GPT API와 현재 PC로 제공할 수 있는 결과면 클라우드 크레딧 대상에서 제외합니다.
 - 다중 리전 외부 실행, 오프사이트 복구, 통신사·CDN 전달, 측정된 대규모 컴퓨팅만 후보가 됩니다.
 - `free credit`은 지출 의무가 아닙니다. 실질 가치가 없으면 만료시키는 편이 운영 부채를 만드는 것보다 낫습니다.
-- 제공사·grant·만료일·발급 근거는 `apps/dashboard/src/data/credit-portfolio.json`이 기계 판독 SSOT입니다.
+- 제공사·grant·만료일·발급 근거는 `data/credit-portfolio.json`이 기계 판독 SSOT입니다.
 
 ## 추가 발급 가능성
 

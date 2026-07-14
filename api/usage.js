@@ -1,0 +1,43 @@
+import { isAuthorized } from "../lib/auth.js";
+import { ncp } from "../lib/ncp-cloud.js";
+import { usageSummary } from "../lib/usage.js";
+export default async function handler(request, response) {
+  if (
+    !(await isAuthorized(
+      new Request("https://work-memory/api/usage", {
+        headers: { cookie: request.headers.cookie || "" },
+      }),
+    ))
+  )
+    return response.status(401).json({ error: "unauthorized" });
+  try {
+    const summary = await usageSummary(),
+      month = new Date().toISOString().slice(0, 7).replace("-", "");
+    let actualNaver = 0;
+    try {
+      const d = await ncp(
+          `/billing/v1/cost/getContractDemandCostList?startMonth=${month}&endMonth=${month}&responseFormatType=json&pageSize=100`,
+          process.env.NCP_BILLING_API_ENDPOINT,
+        ),
+        items =
+          d.getContractDemandCostListResponse?.contractDemandCostList || [];
+      actualNaver = items.reduce(
+        (sum, item) => sum + Number(item.demandAmount || 0),
+        0,
+      );
+    } catch {}
+    const effectiveNaver = Math.max(actualNaver, summary.totals.naver);
+    return response.json({
+      ok: true,
+      ...summary,
+      actual: { naver: actualNaver, kakao: null },
+      totals: { ...summary.totals, naver: effectiveNaver },
+      remaining: {
+        ...summary.remaining,
+        naver: summary.credits.naver - effectiveNaver,
+      },
+    });
+  } catch (error) {
+    return response.status(502).json({ error: error.message });
+  }
+}

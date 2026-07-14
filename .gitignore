@@ -23,3 +23,15 @@ yarn-debug.log*
 Thumbs.db
 .vscode/
 .idea/
+
+# Runtime state and generated artifacts
+data/work-memory.db
+config.json
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+gpu/jobs/
+.playwright-cli/
+output/
+.secrets/

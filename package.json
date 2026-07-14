@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "test": "npm run check:safety && npm run unit:test && npm run dashboard:lint && npm run dashboard:build && npm run dashboard:verify",
+    "test": "npm run check:secrets && npm run unit:test && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-tests.ps1",
     "check:env": "node scripts/check-env.mjs",
     "check:env:naver": "node scripts/check-env.mjs naver",
     "check:env:kakao": "node scripts/check-env.mjs kakao",
@@ -24,11 +24,7 @@
     "artifact:verify:execute": "node scripts/cloud-artifact-verify.mjs --execute",
     "probe:plan": "node scripts/cloud-native-probe-plan.mjs",
     "kakao:token": "node scripts/kakao-token-smoke-test.mjs",
-    "kakao:token:execute": "node scripts/kakao-token-smoke-test.mjs --execute",
-    "dashboard:dev": "npm --prefix apps/dashboard run dev",
-    "dashboard:build": "npm --prefix apps/dashboard run build",
-    "dashboard:lint": "npm --prefix apps/dashboard run lint",
-    "dashboard:verify": "npm --prefix apps/dashboard run verify"
+    "kakao:token:execute": "node scripts/kakao-token-smoke-test.mjs --execute"
   },
   "devDependencies": {}
 }

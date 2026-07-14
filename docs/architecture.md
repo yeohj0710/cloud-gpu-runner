@@ -17,7 +17,7 @@ An active opportunity must include all of these:
 ## Layers
 
 1. **Portfolio SSOT**
-   - `apps/dashboard/src/data/credit-portfolio.json`
+   - `data/credit-portfolio.json`
    - issued grants, expiration, committed cap, parked amount, opportunities, rejected ideas
 
 2. **Cloud execution packages**

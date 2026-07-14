@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>GPU 작업실 · Cloud GPU Runner</title>
+    <link rel="stylesheet" href="/jobs.css" />
+  </head>
+  <body>
+    <header>
+      <a href="/">Cloud GPU Runner</a><span id="readyBadge">연결 확인 중</span>
+    </header>
+    <main>
+      <section class="hero">
+        <p class="eyebrow">GPU WORKBENCH</p>
+        <h1>데이터와 코드를 올리면<br />GPU가 실행하고 알아서 꺼져요</h1>
+        <p class="lead">
+          클라우드 키는 서버에 이미 보관돼 있어요. 여기서는 파일 2개와 실행
+          명령만 넣으면 됩니다.
+        </p>
+      <ol class="steps">
+        <li class="on">1 파일</li>
+        <li>2 클라우드</li>
+        <li>3 실행 설정</li>
+        <li>4 비용 확인</li>
+        <li>5 결과</li>
+        </ol>
+      </section>
+      <section class="band">
+        <div class="inner">
+          <p class="eyebrow">1. 파일 준비</p>
+          <h2>학습 코드와 데이터를 올려주세요</h2>
+          <p class="desc">
+            코드는 ZIP 또는 tar.gz로 묶어주세요. 데이터는 CSV, JSONL, ZIP 등
+            형식 제한이 없습니다.
+          </p>
+          <div class="upload-grid">
+            <label class="drop"
+              ><b>① 학습 코드</b><span id="codeName">ZIP 또는 tar.gz 선택</span
+              ><input id="codeFile" type="file" accept=".zip,.tar.gz,.tgz"
+            /></label>
+            <label class="drop"
+              ><b>② 학습 데이터</b
+              ><span id="dataName">선택 사항 · 대용량 가능</span
+              ><input id="dataFile" type="file"
+            /></label>
+          </div>
+          <div id="uploadState" class="notice">
+            코드·데이터·결과는 네이버 Object Storage에 보관해요. GPU는 작업할
+            때만 만들고 끝나면 자동 반납해요.
+          </div>
+        </div>
+      </section>
+      <section>
+        <p class="eyebrow">2. 클라우드 선택</p>
+        <h2>먼저 만료되는 크레딧부터 써요</h2>
+        <p class="desc">
+          자동 선택은 네이버 GPU가 준비돼 있으면 2026년 7월 31일 만료분부터
+          사용해요. 특정 클라우드로 고정할 수도 있어요.
+        </p>
+        <div class="provider-grid">
+          <label class="provider-card"
+            ><input type="radio" name="provider" value="auto" checked /><b
+              >자동 선택 <em>추천</em></b
+            ><span id="autoState">연결 확인 중</span></label
+          >
+          <label class="provider-card"
+            ><input type="radio" name="provider" value="naver" /><b
+              >네이버클라우드</b
+            ><span id="naverState">연결 확인 중</span></label
+          >
+          <label class="provider-card"
+            ><input type="radio" name="provider" value="kakao" /><b
+              >카카오클라우드</b
+            ><span id="kakaoState">연결 확인 중</span></label
+          >
+        </div>
+      <div id="providerDecision" class="notice">
+        이번 작업의 클라우드를 고르는 중…
+      </div>
+      <button id="setupNaver" class="secondary hidden">네이버 GPU 환경 한 번에 준비</button>
+      <p id="setupNaverState" class="setup-state" role="status"></p>
+      </section>
+      <section class="band">
+        <div class="inner">
+          <p class="eyebrow">3. 실행 설정</p>
+          <h2>평소 터미널에서 쓰는 명령을 넣으세요</h2>
+          <div class="tips-note">
+            <b>Python 프로젝트는 그대로 실행해요</b>
+            <p>
+              <code>requirements.txt</code>와 <code>train.py</code>를 ZIP에 넣고
+              아래 명령을 사용하세요. CUDA 지원 코드라면 선택한 GPU를 자동으로
+              사용해요.
+            </p>
+          </div>
+          <div class="form">
+            <label
+              >실행 명령<textarea
+                id="command"
+                rows="3"
+                spellcheck="false"
+                placeholder='예: pip install -r requirements.txt && python train.py --data "$CGR_DATA_FILE" --output "$CGR_OUTPUT_DIR"'
+              ></textarea
+              ><small
+                >데이터 파일은 <code>$CGR_DATA_FILE</code>, 결과 저장 위치는
+                <code>$CGR_OUTPUT_DIR</code>로 바로 사용할 수 있어요.</small
+              ></label
+            >
+            <div class="two">
+              <label>결과 폴더<input id="outputPath" value="outputs" /></label
+              ><label
+                >최대 실행시간<select id="minutes">
+                  <option value="30">30분</option>
+                  <option value="60" selected>1시간</option>
+                  <option value="120">2시간</option>
+                  <option value="240">4시간</option>
+                  <option value="480">8시간</option>
+                </select></label
+              ><label>GPU<select id="flavor"></select></label
+              ><label
+                >디스크<select id="volume">
+                  <option value="50">50GB</option>
+                  <option value="80" selected>80GB</option>
+                  <option value="120">120GB</option>
+                  <option value="200">200GB</option>
+                </select></label
+              >
+            </div>
+          </div>
+        </div>
+      </section>
+      <section>
+        <p class="eyebrow">4. 실행 전 비용</p>
+        <h2>최대로 나갈 금액을 먼저 확인해요</h2>
+        <div class="cost">
+          <div>
+            <span>최대 예상 비용 · VAT 별도</span
+            ><strong id="costTotal">계산 중</strong
+            ><small id="costBreakdown"></small>
+          </div>
+          <div>
+            <b>언제 과금되나요?</b>
+            <p>
+              GPU 생성부터 삭제까지의 시간 + 디스크 + 작은 저장소 요청
+              비용이에요. 작업이 일찍 끝나면 실제 비용도 줄어요.
+            </p>
+          </div>
+        </div>
+        <button id="run" class="primary">파일 올리고 GPU 실행</button>
+        <p id="message" role="status"></p>
+      </section>
+      <section class="band">
+        <div class="inner">
+          <div class="row">
+            <div>
+              <p class="eyebrow">5. 작업과 결과</p>
+              <h2>실행 현황</h2>
+            </div>
+            <button id="refresh">새로고침</button>
+          </div>
+          <div id="jobs" class="jobs">
+            <p class="empty">아직 실행한 작업이 없습니다.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+    <script src="/jobs-app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>PubMed 연구 근거 수집기 · Cloud GPU Runner</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/research.css" />
+  </head>
+  <body>
+    <header class="plain-header">
+      <a href="/">← 통합 콘솔</a><strong>PubMed 연구 근거 수집기</strong
+      ><a href="https://pubmed.ncbi.nlm.nih.gov/" target="_blank">PubMed ↗</a>
+    </header>
+    <main>
+      <section class="research-hero">
+        <p class="label">Live biomedical evidence</p>
+        <h1>검색식을 한 번 실행하면<br />연구용 근거 파일로 남겨요</h1>
+        <p>
+          PubMed를 실시간 조회해 제목·초록·DOI를 모으고, 같은 PMID를 제거한
+          CSV와 JSON을 만듭니다. 검색식과 실행시각도 함께 보존해 연구 검색을
+          재현할 수 있어요.
+        </p>
+      </section>
+      <section class="research-work">
+        <div class="templates">
+          <button
+            data-query='("vitamin D"[Title/Abstract] OR cholecalciferol[Title/Abstract]) AND (hypercalcemia OR nephrolithiasis)'
+          >
+            비타민 D · 고칼슘혈증</button
+          ><button
+            data-query='("vitamin B6"[Title/Abstract] OR pyridoxine[Title/Abstract]) AND (neuropathy OR neurotoxicity)'
+          >
+            비타민 B6 · 신경병증</button
+          ><button
+            data-query="(dietary supplement*[Title/Abstract]) AND (anticoagulant* OR warfarin) AND (interaction* OR bleeding)"
+          >
+            보충제 · 항응고제 상호작용</button
+          ><button
+            data-query="(probiotic*[Title/Abstract]) AND (adverse event* OR safety)"
+          >
+            프로바이오틱스 안전성
+          </button>
+        </div>
+        <label class="query"
+          >PubMed 검색식<textarea
+            id="query"
+            rows="4"
+            placeholder="예: (vitamin D[Title/Abstract]) AND (hypercalcemia OR toxicity)"
+          ></textarea>
+        </label>
+        <div class="runbar">
+          <label
+            >가져올 최대 문헌<select id="limit">
+              <option>25</option>
+              <option selected>50</option>
+              <option>100</option>
+              <option>200</option>
+            </select></label
+          >
+          <div class="estimate">
+            <b>예상 클라우드 비용 최대 0.018원</b
+            ><small
+              >PubMed 조회 무료 · 버킷 확인과 결과·목록·원장 저장 요청 최대 4회
+              · VAT 별도</small
+            >
+          </div>
+          <button id="run">검색하고 연구 파일 만들기</button>
+        </div>
+        <p id="status" role="status">
+          템플릿을 누르거나 직접 검색식을 입력하세요.
+        </p>
+        <div id="result" class="result hidden"></div>
+        <div class="history">
+          <h2>이전 검색 기록</h2>
+          <div id="runs">불러오는 중…</div>
+        </div>
+      </section>
+    </main>
+    <script src="/research-app.js"></script>
+  </body>
+</html>

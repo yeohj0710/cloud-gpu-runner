@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>카카오 파일 저장소 · Cloud GPU Runner</title>
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/storage.css" />
+    <link rel="stylesheet" href="/estimate.css" />
+  </head>
+  <body data-storage-api="/api/kakao-storage" data-provider-key="kakao">
+    <header class="plain-header">
+      <a href="/">← 통합 콘솔</a><strong>카카오 Object Storage</strong
+      ><button id="logout">로그아웃</button>
+    </header>
+    <main class="plain-main">
+      <section class="storage-page">
+        <p class="label">실제 클라우드 파일 관리</p>
+        <h1>카카오 파일 저장소</h1>
+        <p class="lead">
+          버킷과 파일을 실제로 만들고, 올리고, 내려받고, 삭제합니다. 비용이
+          생기는 업로드는 실행 전에 파일 크기 기준 예상 비용을 보여줍니다.
+        </p>
+        <div class="storage-toolbar">
+          <input
+            id="bucketName"
+            placeholder="새 버킷 이름 (영문 소문자, 숫자, 하이픈)"
+          /><button id="createBucket">버킷 만들기</button
+          ><button id="refresh">새로고침</button>
+        </div>
+        <p class="cost-estimate">
+          가격 기준: 저장 0.0375원/GiB·시간 · 업로드 요청 0.0042원 · 다운로드
+          요청 0.0004원 · VAT 별도
+        </p>
+        <p id="message" class="status-line">연결 중…</p>
+        <div class="storage-layout">
+          <div class="bucket-panel">
+            <h2>버킷</h2>
+            <div id="buckets" class="storage-list"></div>
+          </div>
+          <div class="object-panel">
+            <div class="object-head">
+              <div>
+                <small>선택한 버킷</small>
+                <h2 id="selectedBucket">선택 안 함</h2>
+              </div>
+              <label class="upload"
+                >파일 올리기<input id="file" type="file" disabled
+              /></label>
+            </div>
+            <div id="objects" class="storage-list">
+              <div class="empty">왼쪽에서 버킷을 선택하세요.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+    <script src="/storage-app.js"></script>
+  </body>
+</html>
