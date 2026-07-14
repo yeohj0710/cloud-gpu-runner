@@ -6,6 +6,7 @@ import { addUsage, estimateProviderGpu, KAKAO_GPU_HOURLY } from "../lib/usage.js
 import { assertNoOtherActiveGpuJob, assertProviderCanSpend } from "../lib/spend-guard.js";
 import { safeInstanceDescription } from "../lib/cloud-metadata.js";
 import { assertHighValueCloudGpu, gpuCapability, isHighValueCloudGpu } from "../lib/gpu-policy.js";
+import { classifyKakaoInstance } from "../lib/kakao-instance.js";
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -238,17 +239,19 @@ export default async function handler(request, response) {
         });
         try {
           let activeInstance;
-          for (let attempt = 0; attempt < 30; attempt += 1) {
+          for (let attempt = 0; attempt < 20; attempt += 1) {
             try {
               const details = await bcs("instances?limit=100");
               const candidate = details.instances?.find((item) => item.id === instanceId);
-              if (candidate?.status === "active" && !candidate.task_state) { activeInstance = candidate; break; }
+              const state = classifyKakaoInstance(candidate);
+              if (state === "failed") throw new Error("kakao_gpu_unavailable");
+              if (state === "ready") { activeInstance = candidate; break; }
             } catch (error) {
               if (!/404|409/.test(String(error.message))) throw error;
             }
             await wait(1500);
           }
-          if (!activeInstance) throw new Error("instance_activation_timeout");
+          if (!activeInstance) throw new Error("kakao_gpu_activation_timeout");
           let networkInterfaceId = activeInstance.addresses?.[0]?.network_interface_id;
           if (!networkInterfaceId) {
             const interfaces = await bcs(`instances/${encodeURIComponent(instanceId)}/network-interfaces`);

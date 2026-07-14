@@ -14,7 +14,7 @@
 
   function message(target, text) { $(target).textContent = text; }
   function friendly(error) {
-    return ({ invalid_password: "비밀번호가 올바르지 않아요.", execution_password_invalid: "실행 비밀번호가 올바르지 않아요.", another_gpu_job_active: "이미 실행 중인 GPU 작업이 있어요.", credit_insufficient: "남은 크레딧이 부족해요.", naver_gpu_quota_unavailable: "네이버 GPU 한도가 없어 다른 공급자를 확인할게요.", model_not_found: "저장된 모델을 찾지 못했어요." }[error.message] || error.message);
+    return ({ invalid_password: "비밀번호가 올바르지 않아요.", execution_password_invalid: "실행 비밀번호가 올바르지 않아요.", another_gpu_job_active: "이미 실행 중인 GPU 작업이 있어요.", credit_insufficient: "남은 크레딧이 부족해요.", naver_gpu_quota_unavailable: "네이버 GPU 한도가 없어 다른 공급자를 확인할게요.", kakao_gpu_unavailable: "카카오 A100 GPU도 현재 생성할 수 없어요. 공급자 GPU 한도나 가용 용량을 확인해주세요.", kakao_gpu_activation_timeout: "카카오 GPU 준비가 지연돼 자동으로 취소했어요. 잠시 후 다시 시도해주세요.", model_not_found: "저장된 모델을 찾지 못했어요." }[error.message] || error.message);
   }
 
   function renderModels(models) {
