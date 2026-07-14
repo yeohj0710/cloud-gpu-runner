@@ -12,6 +12,8 @@
     "api/cleanup.js": { "maxDuration": 60 }
   },
   "headers": [
+    {"source": "/jobs", "headers": [{"key": "Cache-Control", "value": "no-store"}]},
+    {"source": "/jobs.html", "headers": [{"key": "Cache-Control", "value": "no-store"}]},
     {"source": "/(.*)", "headers": [{"key": "X-Content-Type-Options", "value": "nosniff"}, {"key": "Referrer-Policy", "value": "no-referrer"}]}
   ]
 }

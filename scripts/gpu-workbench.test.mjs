@@ -27,6 +27,13 @@ for (const marker of ["CGR_METRIC", "CGR_PREDICTION", "CGR_SUMMARY", "torch.cuda
 assert.ok(statSync(new URL("../public/playground/mnist-playground.zip", import.meta.url)).size > 1000, "one-click preset ZIP must be shipped with the site");
 const jobsApi = readFileSync(new URL("../api/jobs.js", import.meta.url), "utf8");
 assert.ok(jobsApi.includes('action === "log-text"'), "completed experiment logs must be readable in the result UI");
+const jobsHtml = readFileSync(new URL("../public/jobs.html", import.meta.url), "utf8");
+assert.match(jobsHtml, /jobs\.css\?v=[a-z0-9-]+/i, "jobs CSS URL must be versioned so browsers cannot mix old layouts");
+assert.match(jobsHtml, /jobs-app\.js\?v=[a-z0-9-]+/i, "jobs JS URL must be versioned so browsers cannot run stale UI code");
+const jobsCss = readFileSync(new URL("../public/jobs.css", import.meta.url), "utf8");
+assert.ok(jobsCss.includes("white-space:nowrap"), "compact labels and actions must not break one Korean character per line");
+const vercelConfig = readFileSync(new URL("../vercel.json", import.meta.url), "utf8");
+assert.ok(vercelConfig.includes('"source": "/jobs"') && vercelConfig.includes('"value": "no-store"'), "protected jobs document must not remain stale after deployment");
 
 const script = customWorkerScript({
   id: "job-1", bucket: "bucket", ...input,
