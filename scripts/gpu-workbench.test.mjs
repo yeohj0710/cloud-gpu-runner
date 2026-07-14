@@ -18,6 +18,7 @@ const input = {
 assert.equal(validateCustomJob(input).command, "python train.py");
 assert.equal(validateCustomJob({ ...input, provider: "naver" }).provider, "naver");
 assert.equal(validateCustomJob({ ...input, task_mode: "inference" }).taskMode, "inference");
+assert.equal(validateCustomJob({ ...input, model_key: "results/model.tar.gz" }).modelKey, "results/model.tar.gz");
 assert.equal(validateCustomJob({ ...input, provider: "invalid" }).provider, "auto");
 assert.throws(() => validateCustomJob({ ...input, output_path: "../escape" }), /unsafe_output_path/);
 assert.throws(() => validateCustomJob({ ...input, command: "python train.py\nrm -rf /" }), /unsafe_command/);
@@ -25,6 +26,11 @@ assert.throws(() => validateCustomJob({ ...input, command: "python train.py\nrm 
 const preset = readFileSync(new URL("../examples/mnist-playground/train_and_infer.py", import.meta.url), "utf8");
 for (const marker of ["CGR_METRIC", "CGR_PREDICTION", "CGR_SUMMARY", "torch.cuda.is_available", "model.pt", "metrics.json", "predictions.json"]) assert.ok(preset.includes(marker), `MNIST preset missing ${marker}`);
 assert.ok(statSync(new URL("../public/playground/mnist-playground.zip", import.meta.url)).size > 1000, "one-click preset ZIP must be shipped with the site");
+const qwenTrain = readFileSync(new URL("../examples/qwen-lora-playground/train.py", import.meta.url), "utf8");
+for (const marker of ["Qwen/Qwen2.5-7B-Instruct", "torch.bfloat16", "r=32", "2048", "CGR_MODEL_SUMMARY", "vram_gb < 40"]) assert.ok(qwenTrain.includes(marker), `7B training preset missing ${marker}`);
+const qwenInfer = readFileSync(new URL("../examples/qwen-lora-playground/infer.py", import.meta.url), "utf8");
+for (const marker of ["PeftModel.from_pretrained", "CGR_MODEL_DIR", "CGR_INFERENCE"]) assert.ok(qwenInfer.includes(marker), `7B inference preset missing ${marker}`);
+assert.ok(statSync(new URL("../public/playground/qwen-lora-playground.zip", import.meta.url)).size > 2500, "7B train/inference ZIP must be shipped with the site");
 const jobsApi = readFileSync(new URL("../api/jobs.js", import.meta.url), "utf8");
 assert.ok(jobsApi.includes('action === "log-text"'), "completed experiment logs must be readable in the result UI");
 const jobsHtml = readFileSync(new URL("../public/jobs.html", import.meta.url), "utf8");
@@ -50,6 +56,8 @@ assert.ok(!script.includes('-d "{"status"'), "worker must not generate syntactic
 assert.ok(Buffer.byteLength(script, "utf8") < 16 * 1024, "cloud-init must stay below Kakao's 16KB user_data limit");
 const longScript = customWorkerScript({ id: "job-2", bucket: "bucket", ...input, result_key: "results/b.tar.gz", log_key: "logs/b.txt", max_minutes: 1440 });
 assert.ok(longScript.includes("X-Amz-Expires=93600"), "24-hour work must keep artifact URLs valid through runtime plus cleanup buffer");
+const inferenceScript = customWorkerScript({ id: "job-3", bucket: "bucket", ...input, model_key: "results/model.tar.gz", result_key: "results/c.tar.gz", log_key: "logs/c.txt", max_minutes: 30 });
+for (const expected of ["progress model_download", "CGR_MODEL_DIR=/workspace/model-artifact", "/tmp/model.tar.gz"]) assert.ok(inferenceScript.includes(expected), `inference worker missing ${expected}`);
 const estimate = estimateGpu("gn1i.xlarge", 60, 80);
 assert.equal(estimate.gpu, 648);
 assert.equal(estimate.disk, 12.8);

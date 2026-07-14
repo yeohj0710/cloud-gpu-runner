@@ -26,6 +26,7 @@ export function customWorkerScript(job, baseUrl = "https://cloud-gpu-runner.verc
   const expiry = Math.min(604800, Math.max(21600, (Number(job.max_minutes) || 60) * 60 + 7200));
   const code = presignObject(job.bucket, job.code_key, "GET", expiry);
   const data = job.data_key ? presignObject(job.bucket, job.data_key, "GET", expiry) : "";
+  const model = job.model_key ? presignObject(job.bucket, job.model_key, "GET", expiry) : "";
   const output = presignObject(job.bucket, job.result_key, "PUT", expiry);
   const log = presignObject(job.bucket, job.log_key, "PUT", expiry);
   const callback = `${baseUrl}/api/worker-callback?id=${encodeURIComponent(job.id)}&token=${jobToken(job.id)}`;
@@ -38,7 +39,7 @@ set -Eeuo pipefail
 CALLBACK='${callback}'
 LOG_URL='${log}'
 exec > >(tee /var/log/cgr-worker.log) 2>&1
-finish(){ trap - ERR; status="$1"; error="\${2:-}"; if [ -d "/workspace/${outputPath}" ] && [ -n "$(find "/workspace/${outputPath}" -mindepth 1 -print -quit)" ]; then tar -czf /tmp/result.tar.gz -C /workspace "${outputPath}"; else printf '{"status":"%s","message":"output directory is empty"}\n' "$status" >/tmp/result-status.json; tar -czf /tmp/result.tar.gz -C /tmp result-status.json; fi; curl -fsS -X PUT -H 'content-type: application/gzip' --upload-file /tmp/result.tar.gz '${output}' || true; curl -fsS -X PUT -H 'content-type: text/plain' --upload-file /var/log/cgr-worker.log "$LOG_URL" || true; printf '{"status":"%s","error":"%s"}' "$status" "$error" | curl -fsS -X POST -H 'content-type: application/json' --data-binary @- "$CALLBACK" || true; shutdown -h now || true; }
+finish(){ trap - ERR; status="$1"; error="\${2:-}"; if [ -d "/workspace/${outputPath}" ] && [ -n "$(find "/workspace/${outputPath}" -mindepth 1 -print -quit)" ]; then tar -czf /tmp/result.tar.gz -C /workspace "${outputPath}"; else printf '{"status":"%s","message":"output directory is empty"}\n' "$status" >/tmp/result-status.json; tar -czf /tmp/result.tar.gz -C /tmp result-status.json; fi; curl -fsS -X PUT -H 'content-type: application/gzip' --upload-file /tmp/result.tar.gz '${output}' || true; curl -fsS -X PUT -H 'content-type: text/plain' --upload-file /var/log/cgr-worker.log "$LOG_URL" || true; METADATA="/workspace/${outputPath}/model-metadata.json"; if [ -f "$METADATA" ]; then python3 -c 'import json,sys; print(json.dumps({"status":sys.argv[1],"error":sys.argv[2],"model_metadata":json.load(open(sys.argv[3],encoding="utf-8"))},ensure_ascii=False))' "$status" "$error" "$METADATA" | curl -fsS -X POST -H 'content-type: application/json' --data-binary @- "$CALLBACK" || true; else printf '{"status":"%s","error":"%s"}' "$status" "$error" | curl -fsS -X POST -H 'content-type: application/json' --data-binary @- "$CALLBACK" || true; fi; shutdown -h now || true; }
 fail(){ code=$?; if [ "$code" = 124 ]; then finish failed "execution timeout"; else finish failed "worker failed (exit $code)"; fi; }
 trap fail ERR
 progress(){ printf '{"status":"running","stage":"%s"}' "$1" | curl -fsS --connect-timeout 15 --max-time 30 -X POST -H 'content-type: application/json' --data-binary @- "$CALLBACK"; }
@@ -55,7 +56,11 @@ progress code_extract
 ${archive === "zip" ? "python3 -m zipfile -e /tmp/code.zip /workspace" : "tar -xzf /tmp/code.tar.gz -C /workspace"}
 ${data ? `progress data_download
 curl -fL --connect-timeout 15 --max-time 3600 '${data}' -o '/workspace/input/${String(job.data_key).split("/").pop().replace(/'/g, "")}'` : "true"}
-export CGR_DATA_DIR=/workspace/input CGR_DATA_FILE='${data ? `/workspace/input/${String(job.data_key).split("/").pop().replace(/'/g, "")}` : ""}' CGR_OUTPUT_DIR=/workspace/${outputPath} CGR_JOB_ID='${job.id}'
+${model ? `progress model_download
+mkdir -p /workspace/model-artifact
+curl -fL --connect-timeout 15 --max-time 3600 '${model}' -o /tmp/model.tar.gz
+tar -xzf /tmp/model.tar.gz -C /workspace/model-artifact` : "true"}
+export CGR_DATA_DIR=/workspace/input CGR_DATA_FILE='${data ? `/workspace/input/${String(job.data_key).split("/").pop().replace(/'/g, "")}` : ""}' CGR_MODEL_DIR=/workspace/model-artifact CGR_OUTPUT_DIR=/workspace/${outputPath} CGR_JOB_ID='${job.id}'
 WORKDIR=/workspace
 mapfile -t roots < <(find /workspace -mindepth 1 -maxdepth 1 -type d ! -name input ! -name '${outputRoot}')
 files=$(find /workspace -mindepth 1 -maxdepth 1 -type f | wc -l)

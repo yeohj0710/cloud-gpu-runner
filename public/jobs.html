@@ -1,60 +1,15 @@
-<!doctype html>
-<html lang="ko">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <meta name="theme-color" content="#ffffff" />
-    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
-    <title>AI 학습 놀이터 · Cloud GPU Runner</title>
-    <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="/jobs.css?v=20260714-readable-history" />
-  </head>
-  <body>
-    <header><a href="/">Cloud GPU Runner</a><span id="readyBadge">GPU 확인 중</span></header>
-    <main>
-      <section class="hero">
-        <div class="hero-copy"><p class="eyebrow">AI PLAYGROUND</p><h1>버튼 한 번으로<br />AI를 직접 학습해보세요</h1><p class="lead">코드도, 데이터도, 설정도 이미 준비했어요. 실제 클라우드 GPU가 손글씨 숫자를 배우고 추론하는 전 과정을 보여드려요.</p></div>
-        <article class="experiment">
-          <div class="experiment-head"><div class="model-icon">7</div><div><span>준비된 실험</span><h3>손글씨 숫자 분류 AI</h3></div><i id="experimentState">준비 중</i></div>
-          <dl><div><dt>학습 데이터</dt><dd>MNIST 60,000장</dd></div><div><dt>검증 데이터</dt><dd>10,000장</dd></div><div><dt>학습 횟수</dt><dd>3 Epoch</dd></div><div><dt>최대 실행</dt><dd>30분</dd></div></dl>
-          <div class="cost-line"><span>예상 최대 비용 · VAT 별도</span><strong id="costTotal">계산 중</strong></div><p id="providerLine" class="provider-line">사용 가능한 GPU를 찾고 있어요.</p>
-          <button id="run" class="primary" disabled>AI 학습 시작하기</button><p class="billing-note">실행 직전 비밀번호를 확인해요. 확인하면 실제 크레딧이 차감됩니다.</p><p id="message" role="status"></p>
-        </article>
-      </section>
+<!doctype html><html lang="ko"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><meta name="theme-color" content="#fff"/><meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate"/><title>7B AI 모델 놀이터 · Cloud GPU Runner</title><link rel="icon" href="data:,"/><link rel="stylesheet" href="/jobs.css?v=20260714-model-registry"/></head>
+<body><header><a href="/">Cloud GPU Runner</a><span id="readyBadge">GPU 확인 중</span></header><main>
+<section class="hero"><div class="hero-copy"><p class="eyebrow">7B LLM PLAYGROUND</p><h1>학습한 AI를 쌓고<br/>다시 불러와 추론해요</h1><p class="lead">48GB급 GPU에서 76억 파라미터 한국어 모델을 실제로 학습해요. 완료된 모델은 버전별로 계속 보관되고 언제든 다시 질문할 수 있어요.</p></div>
+<article class="experiment"><div class="experiment-head"><div class="model-icon">7B</div><div><span>고성능 학습</span><h3>Qwen2.5 한국어 LoRA</h3></div><i id="experimentState">준비 중</i></div><dl><div><dt>기본 모델</dt><dd>7.61B</dd></div><div><dt>학습 데이터</dt><dd>2,048개</dd></div><div><dt>학습 방식</dt><dd>BF16 LoRA</dd></div><div><dt>최대 실행</dt><dd>60분</dd></div></dl><div class="cost-line"><span>예상 최대 비용 · VAT 별도</span><strong id="costTotal">계산 중</strong></div><p id="providerLine" class="provider-line">48GB 이상 GPU를 찾고 있어요.</p><button id="run" class="primary" disabled>새 7B 모델 학습하기</button><p class="billing-note">실행 직전 비밀번호를 확인해요. 학습된 모델은 자동으로 영구 등록됩니다.</p><p id="message" role="status"></p></article></section>
 
-      <section class="soft">
-        <div class="inner">
-          <div class="section-copy"><p class="eyebrow">READY TO RUN</p><h2>오늘은 숫자를 읽는<br />AI를 만들어요</h2><p>MNIST 손글씨 6만 장을 학습하고, 처음 보는 숫자 1만 장으로 실력을 확인해요. 학습이 끝나면 정확도와 실제 추론 10건을 바로 볼 수 있어요.</p></div>
-        </div>
-      </section>
+<section class="soft model-section"><div class="inner"><div class="section-copy"><p class="eyebrow">MODEL REGISTRY</p><h2>학습한 모델이<br/>여기에 계속 쌓여요</h2><p>각 버전의 학습 GPU·시간·비용을 보관해요. 원하는 모델을 골라 새로운 질문으로 추론할 수 있어요.</p></div><div id="modelList" class="model-list"><p class="empty">아직 완료된 모델이 없어요.</p></div></div></section>
 
-      <section id="progressSection" class="progress-section" hidden>
-        <div class="inner narrow">
-          <p class="eyebrow">LIVE TRAINING</p><h2 id="progressTitle">AI가 학습을 준비하고 있어요</h2>
-          <div class="timeline">
-            <div data-step="provisioning"><i>1</i><span><b>GPU 준비</b><small>클라우드 서버를 만들어요</small></span></div>
-            <div data-step="running"><i>2</i><span><b>모델 학습</b><small>손글씨 6만 장을 세 번 학습해요</small></span></div>
-            <div data-step="completed"><i>3</i><span><b>추론 확인</b><small>처음 보는 숫자로 실력을 확인해요</small></span></div>
-          </div>
-          <button id="cancel" class="secondary" hidden>실행 취소</button>
-        </div>
-      </section>
+<section id="inferenceSection" class="inference-section" hidden><div class="inner narrow"><p class="eyebrow">INFERENCE</p><h2 id="selectedModelTitle">모델로 질문해보세요</h2><p class="inference-help">선택한 LoRA 어댑터와 Qwen2.5-7B를 GPU에 불러와 실제 답변을 생성합니다.</p><textarea id="prompt" rows="5" maxlength="2000" placeholder="예: 인공지능 모델을 학습할 때 과적합을 줄이는 방법을 쉽게 설명해줘."></textarea><div class="inference-actions"><button id="infer" class="primary">이 모델로 추론하기</button><span id="inferenceEstimate">예상 비용 계산 중</span></div><p id="inferenceMessage" role="status"></p><article id="answerCard" class="answer-card" hidden><span>모델 답변</span><p id="answer"></p><small id="answerMeta"></small></article></div></section>
 
-      <section id="resultSection" class="result-section" hidden>
-        <div class="inner">
-          <p class="eyebrow">RESULT</p><h2>AI가 학습을 마쳤어요</h2>
-          <div class="result-summary"><div><span>최종 정확도</span><strong id="accuracy">-</strong></div><div><span>학습 시간</span><strong id="trainingTime">-</strong></div><div><span>실제 비용</span><strong id="actualCost">-</strong></div></div>
-          <h3>처음 본 숫자도 이렇게 읽었어요</h3>
-          <div id="predictions" class="predictions"></div>
-          <div class="epoch-wrap"><h3>학습할수록 정확해졌어요</h3><div id="epochs" class="epochs"></div></div>
-          <div class="result-actions"><a id="resultDownload">모델과 결과 받기</a><a id="logDownload" class="subtle">전체 학습 로그</a></div>
-        </div>
-      </section>
+<section id="progressSection" class="progress-section" hidden><div class="inner narrow"><p class="eyebrow">GPU JOB</p><h2 id="progressTitle">GPU를 준비하고 있어요</h2><div class="timeline"><div><i>1</i><span><b>GPU 준비</b><small>48GB 이상 서버를 만들어요</small></span></div><div><i>2</i><span><b id="workStepTitle">7B 모델 학습</b><small id="workStepCopy">기본 모델을 내려받고 LoRA를 학습해요</small></span></div><div><i>3</i><span><b>결과 보관</b><small>모델·로그·비용을 저장하고 GPU를 반납해요</small></span></div></div><button id="cancel" class="secondary" hidden>실행 취소</button></div></section>
 
-      <section class="history-section"><div class="inner"><div class="history-head"><div><p class="eyebrow">HISTORY</p><h2>최근 실험</h2></div><button id="refresh" class="secondary">새로고침</button></div><div id="jobs" class="jobs"><p class="empty">아직 실행한 실험이 없어요.</p></div></div></section>
-    </main>
-
-    <dialog id="executionDialog" aria-labelledby="executionTitle"><form id="executionForm" method="dialog"><p class="eyebrow">PAID EXECUTION</p><h2 id="executionTitle">실제 GPU로 학습할까요?</h2><p id="executionSummary" class="dialog-copy"></p><label>실행 비밀번호<input id="executionPassword" type="password" inputmode="numeric" autocomplete="off" maxlength="32" placeholder="비밀번호 입력" /></label><p id="executionError" class="dialog-error" role="alert"></p><div class="dialog-actions"><button id="executionCancel" type="button">취소</button><button class="primary" type="submit">확인하고 학습 시작</button></div></form></dialog>
-    <script src="/jobs-app.js?v=20260714-readable-history"></script>
-  </body>
-</html>
+<section class="history-section"><div class="inner"><div class="history-head"><div><p class="eyebrow">HISTORY</p><h2>학습과 추론 기록</h2></div><button id="refresh" class="secondary">새로고침</button></div><div id="jobs" class="jobs"><p class="empty">아직 실행 기록이 없어요.</p></div></div></section>
+</main>
+<dialog id="executionDialog" aria-labelledby="executionTitle"><form id="executionForm" method="dialog"><p class="eyebrow">PAID EXECUTION</p><h2 id="executionTitle">실제 GPU를 실행할까요?</h2><p id="executionSummary" class="dialog-copy"></p><label>실행 비밀번호<input id="executionPassword" type="password" inputmode="numeric" autocomplete="off" maxlength="32" placeholder="비밀번호 입력"/></label><p id="executionError" class="dialog-error" role="alert"></p><div class="dialog-actions"><button id="executionCancel" type="button">취소</button><button id="executionConfirm" class="primary" type="submit">확인하고 실행</button></div></form></dialog>
+<script src="/jobs-app.js?v=20260714-model-registry"></script></body></html>
