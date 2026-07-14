@@ -27,7 +27,7 @@ const preset = readFileSync(new URL("../examples/mnist-playground/train_and_infe
 for (const marker of ["CGR_METRIC", "CGR_PREDICTION", "CGR_SUMMARY", "torch.cuda.is_available", "model.pt", "metrics.json", "predictions.json"]) assert.ok(preset.includes(marker), `MNIST preset missing ${marker}`);
 assert.ok(statSync(new URL("../public/playground/mnist-playground.zip", import.meta.url)).size > 1000, "one-click preset ZIP must be shipped with the site");
 const qwenTrain = readFileSync(new URL("../examples/qwen-lora-playground/train.py", import.meta.url), "utf8");
-for (const marker of ["Qwen/Qwen2.5-7B-Instruct", "torch.bfloat16", "r=32", "2048", "CGR_MODEL_SUMMARY", "vram_gb < 40"]) assert.ok(qwenTrain.includes(marker), `7B training preset missing ${marker}`);
+for (const marker of ["Qwen/Qwen2.5-7B-Instruct", "BitsAndBytesConfig", "prepare_model_for_kbit_training", "load_in_4bit", "torch.bfloat16", "r=32", "2048", "CGR_MODEL_SUMMARY"]) assert.ok(qwenTrain.includes(marker), `7B training preset missing ${marker}`);
 const qwenInfer = readFileSync(new URL("../examples/qwen-lora-playground/infer.py", import.meta.url), "utf8");
 for (const marker of ["PeftModel.from_pretrained", "CGR_MODEL_DIR", "CGR_INFERENCE"]) assert.ok(qwenInfer.includes(marker), `7B inference preset missing ${marker}`);
 assert.ok(statSync(new URL("../public/playground/qwen-lora-playground.zip", import.meta.url)).size > 2500, "7B train/inference ZIP must be shipped with the site");

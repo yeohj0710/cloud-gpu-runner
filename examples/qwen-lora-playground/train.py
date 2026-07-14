@@ -6,8 +6,8 @@ from pathlib import Path
 
 import torch
 from datasets import load_dataset
-from peft import LoraConfig, get_peft_model
-from transformers import AutoModelForCausalLM, AutoTokenizer, DataCollatorForLanguageModeling, Trainer, TrainingArguments
+from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, DataCollatorForLanguageModeling, Trainer, TrainingArguments
 
 BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 DATASET = "beomi/KoAlpaca-v1.1a"
@@ -17,12 +17,11 @@ OUTPUT.mkdir(parents=True, exist_ok=True)
 torch.manual_seed(903)
 
 if not torch.cuda.is_available():
-    raise RuntimeError("48GB급 CUDA GPU가 필요합니다.")
+    raise RuntimeError("CUDA GPU가 필요합니다.")
 
 gpu = torch.cuda.get_device_name(0)
 vram_gb = round(torch.cuda.get_device_properties(0).total_memory / 1024**3, 1)
-if vram_gb < 40:
-    raise RuntimeError(f"VRAM {vram_gb}GB: 이 실험은 48GB급 GPU용입니다.")
+use_qlora = vram_gb < 40
 
 started = time.time()
 tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, use_fast=True)
@@ -40,7 +39,12 @@ def tokenize(row):
     return tokenizer(text, truncation=True, max_length=512)
 
 dataset = raw.map(tokenize, remove_columns=raw.column_names, num_proc=2)
-model = AutoModelForCausalLM.from_pretrained(BASE_MODEL, torch_dtype=torch.bfloat16, attn_implementation="sdpa")
+if use_qlora:
+    quantization = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.float16, bnb_4bit_use_double_quant=True)
+    model = AutoModelForCausalLM.from_pretrained(BASE_MODEL, quantization_config=quantization, device_map={"": 0}, attn_implementation="sdpa")
+    model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
+else:
+    model = AutoModelForCausalLM.from_pretrained(BASE_MODEL, torch_dtype=torch.bfloat16, attn_implementation="sdpa")
 model.config.use_cache = False
 model.gradient_checkpointing_enable()
 model = get_peft_model(model, LoraConfig(
@@ -51,10 +55,10 @@ model.print_trainable_parameters()
 
 args = TrainingArguments(
     output_dir=str(OUTPUT / "checkpoints"), max_steps=120,
-    per_device_train_batch_size=2, gradient_accumulation_steps=8,
+    per_device_train_batch_size=1 if use_qlora else 2, gradient_accumulation_steps=16 if use_qlora else 8,
     learning_rate=2e-4, warmup_steps=10, lr_scheduler_type="cosine",
-    bf16=True, gradient_checkpointing=True, logging_steps=10,
-    save_strategy="no", report_to="none", optim="adamw_torch_fused",
+    bf16=not use_qlora, fp16=use_qlora, gradient_checkpointing=True, logging_steps=10,
+    save_strategy="no", report_to="none", optim="paged_adamw_8bit" if use_qlora else "adamw_torch_fused",
 )
 trainer = Trainer(model=model, args=args, train_dataset=dataset, data_collator=DataCollatorForLanguageModeling(tokenizer, mlm=False))
 result = trainer.train()
@@ -64,7 +68,7 @@ tokenizer.save_pretrained(ADAPTER)
 summary = {
     "preset_id": "qwen-lora-v1", "base_model": BASE_MODEL, "dataset": DATASET,
     "samples": 2048, "steps": 120, "sequence_length": 512,
-    "method": "BF16 LoRA", "lora_rank": 32, "train_loss": round(result.training_loss, 4),
+    "method": "4-bit QLoRA" if use_qlora else "BF16 LoRA", "lora_rank": 32, "train_loss": round(result.training_loss, 4),
     "perplexity": round(math.exp(min(20, result.training_loss)), 2),
     "seconds": round(time.time() - started, 1), "gpu": gpu, "vram_gb": vram_gb,
     "peak_vram_gb": round(torch.cuda.max_memory_allocated() / 1024**3, 1),

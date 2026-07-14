@@ -18,6 +18,8 @@ assert.match(js, /\/api\/models/);
 assert.match(js, /naver_gpu_quota_unavailable/);
 assert.match(js, /kakaoFallback/);
 assert.match(js, /kakao_gpu_unavailable/);
+assert.match(js, /kakaoT4Fallback/);
+assert.match(js, /\/api\/jobs\?action=retry/);
 assert.match(api, /listModels/);
 assert.match(api, /models/);
 assert.doesNotMatch(api, /artifact_key:\s*model\.artifact_key|bucket:\s*model\.bucket/);

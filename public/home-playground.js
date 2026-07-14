@@ -44,13 +44,15 @@
 
   async function loadEnvironment() {
     if (environment) return environment;
-    const [storage, naver, kakao] = await Promise.all([api("/api/ncp-storage?action=buckets"), api("/api/ncp-gpu").catch(() => null), api("/api/cloud?action=readiness").catch(() => null)]);
+    const [storage, naver, kakao, kakaoAll] = await Promise.all([api("/api/ncp-storage?action=buckets"), api("/api/ncp-gpu").catch(() => null), api("/api/cloud?action=readiness").catch(() => null), api("/api/cloud?action=gpu-flavors").catch(() => null)]);
     const bucket = storage.items.find((item) => /artifact|cloud-gpu|work-memory/i.test(item.name))?.name || storage.items[0]?.name;
     if (!bucket) throw new Error("모델을 저장할 버킷이 없어요.");
-    let kakaoFallback = null;
-    if (kakao?.flavors?.length) { const flavor = [...kakao.flavors].filter((item) => item.vram_per_gpu_gb >= 48 && kakao.pricing?.gpu_hourly?.[item.name]).sort((a, b) => kakao.pricing.gpu_hourly[a.name] - kakao.pricing.gpu_hourly[b.name])[0], image = kakao.images?.find((item) => /nvidia/i.test(item.name || "")); if (flavor && image && kakao.keypairs?.[0] && kakao.subnets?.[0] && kakao.security_groups?.[0]) kakaoFallback = { provider: "kakao", bucket, flavor, image, keypair: kakao.keypairs[0], subnet: kakao.subnets[0], securityGroup: kakao.security_groups[0], volume: 80 }; }
+    let kakaoFallback = null, kakaoT4Fallback = null;
+    const image = kakao?.images?.find((item) => /nvidia/i.test(item.name || "")), common = image && kakao?.keypairs?.[0] && kakao?.subnets?.[0] && kakao?.security_groups?.[0] ? { provider: "kakao", bucket, image, keypair: kakao.keypairs[0], subnet: kakao.subnets[0], securityGroup: kakao.security_groups[0], volume: 80 } : null;
+    if (common) { const t4 = [...(kakaoAll?.items || [])].filter((item) => /^gn1i\./i.test(item.name) && kakao.pricing?.gpu_hourly?.[item.name]).sort((a, b) => kakao.pricing.gpu_hourly[a.name] - kakao.pricing.gpu_hourly[b.name])[0]; if (t4) kakaoT4Fallback = { ...common, flavor: t4, profile: "qlora-4bit" }; }
+    if (kakao?.flavors?.length && common) { const flavor = [...kakao.flavors].filter((item) => item.vram_per_gpu_gb >= 48 && kakao.pricing?.gpu_hourly?.[item.name]).sort((a, b) => kakao.pricing.gpu_hourly[a.name] - kakao.pricing.gpu_hourly[b.name])[0]; if (flavor) kakaoFallback = { ...common, flavor, kakaoT4Fallback, profile: "bf16-lora" }; }
     if (naver?.ok) { const spec = [...naver.specs].filter((item) => item.vram_per_gpu_gb >= 48).sort((a, b) => a.hourly_rate - b.hourly_rate)[0]; if (spec) environment = { provider: "naver", bucket, spec, launch: naver.launch_configs[0], key: naver.keys[0], volume: 50, kakaoFallback }; }
-    if (!environment) environment = kakaoFallback;
+    if (!environment) environment = kakaoFallback || kakaoT4Fallback;
     if (!environment) throw new Error("사용 가능한 48GB 이상 GPU가 없어요.");
     return environment;
   }
@@ -63,7 +65,7 @@
     await api("/api/ncp-storage?action=upload-complete", { method: "POST", body: JSON.stringify({ bucket: targetBucket, key, size: blob.size }) });
     return key;
   }
-  async function uploadBundle(targetBucket) { const response = await fetch("/playground/qwen-lora-playground.zip?v=1"); if (!response.ok) throw new Error("학습 코드를 불러오지 못했어요."); return uploadBlob(targetBucket, await response.blob(), "qwen-lora-playground.zip", "application/zip"); }
+  async function uploadBundle(targetBucket) { const response = await fetch("/playground/qwen-lora-playground.zip?v=2"); if (!response.ok) throw new Error("학습 코드를 불러오지 못했어요."); return uploadBlob(targetBucket, await response.blob(), "qwen-lora-playground.zip", "application/zip"); }
 
   async function launch(job, password, maxMinutes, purpose) {
     currentJob = job; $("#homeProgress").hidden = false; $("#homeProgressTitle").textContent = "48GB GPU를 준비하고 있어요";
@@ -75,7 +77,14 @@
   }
 
   async function launchKakao(job, password, maxMinutes, purpose) {
-    await api("/api/cloud?action=create", { method: "POST", body: JSON.stringify({ job_id: job.id, purpose, flavor_id: environment.flavor.id, image_id: environment.image.id, subnet_id: environment.subnet.id, key_name: environment.keypair.name, security_group: environment.securityGroup.name, max_minutes: maxMinutes, volume_gb: 80, execution_password: password }) });
+    try { await api("/api/cloud?action=create", { method: "POST", body: JSON.stringify({ job_id: job.id, purpose, flavor_id: environment.flavor.id, image_id: environment.image.id, subnet_id: environment.subnet.id, key_name: environment.keypair.name, security_group: environment.securityGroup.name, max_minutes: maxMinutes, volume_gb: 80, execution_password: password }) }); }
+    catch (error) {
+      if (!["kakao_gpu_unavailable", "kakao_gpu_activation_timeout"].includes(error.message) || !environment.kakaoT4Fallback) throw error;
+      await api("/api/jobs?action=retry", { method: "POST", body: JSON.stringify({ id: job.id }) });
+      environment = environment.kakaoT4Fallback;
+      $("#homeProgressTitle").textContent = "카카오 T4에서 4-bit QLoRA로 전환하고 있어요";
+      await launchKakao(job, password, maxMinutes, purpose);
+    }
   }
 
   function parseResult(text) { for (const line of text.split(/\r?\n/)) if (line.includes("CGR_INFERENCE ")) try { return JSON.parse(line.slice(line.indexOf("CGR_INFERENCE ") + 14)); } catch {} return null; }
@@ -88,7 +97,7 @@
   }
 
   async function train() {
-    const password = await requestPassword("Qwen2.5-7B를 48GB 이상 GPU에서 최대 60분 학습해요. 실제 크레딧이 차감됩니다."); if (!password) return;
+    const password = await requestPassword("Qwen2.5-7B를 가용 GPU에서 최대 60분 학습해요. 48GB급이 막히면 T4용 4-bit QLoRA로 전환하며 실제 크레딧이 차감됩니다."); if (!password) return;
     $("#playgroundTrain").disabled = true; message("#playgroundMessage", "GPU와 예상 비용을 확인하고 있어요.");
     try { const env = await loadEnvironment(), flavor = env.provider === "naver" ? env.spec.serverSpecCode : env.flavor.name, estimate = await api("/api/estimate?type=gpu", { method: "POST", body: JSON.stringify({ provider: env.provider, flavor, minutes: 60, volume_gb: env.volume }) }); message("#playgroundMessage", `최대 예상 ${won(estimate.total)} · 학습 파일을 준비하고 있어요.`); const codeKey = await uploadBundle(env.bucket), created = await api("/api/jobs", { method: "POST", body: JSON.stringify({ type: "custom-gpu", task_mode: "training", preset_id: "qwen-lora-v1", provider: env.provider, bucket: env.bucket, code_key: codeKey, command: "pip install -r requirements.txt && python train.py", output_path: "outputs" }) }); await launch(created.job, password, 60, "qwen-lora-training"); message("#playgroundMessage", ""); } catch (error) { message("#playgroundMessage", friendly(error)); $("#playgroundTrain").disabled = false; }
   }

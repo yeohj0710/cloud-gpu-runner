@@ -5,7 +5,7 @@ from pathlib import Path
 
 import torch
 from peft import PeftModel
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 model_root = Path(os.environ["CGR_MODEL_DIR"])
@@ -20,7 +20,12 @@ if not prompt:
 
 started = time.time()
 tokenizer = AutoTokenizer.from_pretrained(adapter)
-base = AutoModelForCausalLM.from_pretrained(BASE_MODEL, torch_dtype=torch.bfloat16, attn_implementation="sdpa").to("cuda")
+vram_gb = torch.cuda.get_device_properties(0).total_memory / 1024**3
+if vram_gb < 40:
+    quantization = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.float16, bnb_4bit_use_double_quant=True)
+    base = AutoModelForCausalLM.from_pretrained(BASE_MODEL, quantization_config=quantization, device_map={"": 0}, attn_implementation="sdpa")
+else:
+    base = AutoModelForCausalLM.from_pretrained(BASE_MODEL, torch_dtype=torch.bfloat16, attn_implementation="sdpa").to("cuda")
 model = PeftModel.from_pretrained(base, adapter).eval()
 messages = [
     {"role": "system", "content": "당신은 정확하고 이해하기 쉬운 한국어로 답하는 AI 도우미입니다."},

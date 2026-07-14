@@ -5,7 +5,7 @@ import { presignObject } from "../lib/ncp-storage.js";
 import { addUsage, estimateProviderGpu, KAKAO_GPU_HOURLY } from "../lib/usage.js";
 import { assertNoOtherActiveGpuJob, assertProviderCanSpend } from "../lib/spend-guard.js";
 import { safeInstanceDescription } from "../lib/cloud-metadata.js";
-import { assertHighValueCloudGpu, gpuCapability, isHighValueCloudGpu } from "../lib/gpu-policy.js";
+import { assertGpuEligibleForJob, gpuCapability, isHighValueCloudGpu } from "../lib/gpu-policy.js";
 import { classifyKakaoInstance } from "../lib/kakao-instance.js";
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -172,7 +172,7 @@ export default async function handler(request, response) {
           return response.status(400).json({ error: "nvidia_image_required" });
         if (!selectedFlavor || String(selectedFlavor.manufacturer).toLowerCase() !== "nvidia")
           return response.status(400).json({ error: "nvidia_gpu_required" });
-        assertHighValueCloudGpu("kakao", selectedFlavor);
+        assertGpuEligibleForJob("kakao", selectedFlavor, job);
       }
       const maxMinutes = Math.min(
         1440,
@@ -231,6 +231,11 @@ export default async function handler(request, response) {
           provider: "kakao",
           status: "provisioning",
           instance_id: instanceId,
+          instance_deleted_at: undefined,
+          public_ip_id: undefined,
+          public_ip_removed_at: undefined,
+          error: undefined,
+          cleanup_error: undefined,
           max_minutes: Math.min(1440, Math.max(15, Number(v.max_minutes) || 60)),
           volume_gb: Math.max(50, Number(v.volume_gb) || 50),
           flavor_name: flavor?.name,
