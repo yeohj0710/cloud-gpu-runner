@@ -1,6 +1,6 @@
 import { isAuthorized, isExecutionPassword } from "../lib/auth.js";
 import { customWorkerScript } from "./cloud.js";
-import { bootstrapNcpGpu, createNcpGpu, deleteNcpGpu, ncpGpuReadiness, NCP_BLOCK_STORAGE_GIB_HOUR } from "../lib/ncp-gpu.js";
+import { bootstrapNcpGpu, createNcpGpu, deleteNcpGpu, isNcpGpuQuotaError, ncpGpuReadiness, NCP_BLOCK_STORAGE_GIB_HOUR } from "../lib/ncp-gpu.js";
 import { listJobs, updateJob } from "../lib/jobs.js";
 import { estimateProviderGpu } from "../lib/usage.js";
 import { assertNoOtherActiveGpuJob, assertProviderCanSpend } from "../lib/spend-guard.js";
@@ -31,7 +31,13 @@ export default async function handler(request, response) {
       region_code: "KR", spec_code: String(value.spec_code || ""), vpc_no: String(value.vpc_no || ""),
       subnet_no: String(value.subnet_no || ""), login_key_name: String(value.login_key_name || ""), acg_no: String(value.acg_no || ""),
     }, script); }
-    catch (error) { await updateJob(job.id, { status: "failed", error: String(error.message).slice(0, 500) }).catch(() => {}); throw error; }
+    catch (error) {
+      if (isNcpGpuQuotaError(error)) {
+        await updateJob(job.id, { status: "queued", provider: undefined, error: undefined, last_provider_error: "naver_gpu_quota_unavailable" }).catch(() => {});
+        throw new Error("naver_gpu_quota_unavailable");
+      }
+      await updateJob(job.id, { status: "failed", error: String(error.message).slice(0, 500) }).catch(() => {}); throw error;
+    }
     const instance = created.instance;
     let updated;
     const resourceJob = { ...job, provider: "naver", instance_id: instance.serverInstanceNo, init_script_no: created.init_script_no, region_code: instance.regionCode || "KR", public_ip_id: instance.publicIpInstanceNo || undefined, public_ip_address: instance.publicIp || undefined };

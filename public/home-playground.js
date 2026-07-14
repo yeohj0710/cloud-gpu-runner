@@ -14,7 +14,7 @@
 
   function message(target, text) { $(target).textContent = text; }
   function friendly(error) {
-    return ({ invalid_password: "비밀번호가 올바르지 않아요.", execution_password_invalid: "실행 비밀번호가 올바르지 않아요.", another_gpu_job_active: "이미 실행 중인 GPU 작업이 있어요.", credit_insufficient: "남은 크레딧이 부족해요.", model_not_found: "저장된 모델을 찾지 못했어요." }[error.message] || error.message);
+    return ({ invalid_password: "비밀번호가 올바르지 않아요.", execution_password_invalid: "실행 비밀번호가 올바르지 않아요.", another_gpu_job_active: "이미 실행 중인 GPU 작업이 있어요.", credit_insufficient: "남은 크레딧이 부족해요.", naver_gpu_quota_unavailable: "네이버 GPU 한도가 없어 다른 공급자를 확인할게요.", model_not_found: "저장된 모델을 찾지 못했어요." }[error.message] || error.message);
   }
 
   function renderModels(models) {
@@ -47,8 +47,10 @@
     const [storage, naver, kakao] = await Promise.all([api("/api/ncp-storage?action=buckets"), api("/api/ncp-gpu").catch(() => null), api("/api/cloud?action=readiness").catch(() => null)]);
     const bucket = storage.items.find((item) => /artifact|cloud-gpu|work-memory/i.test(item.name))?.name || storage.items[0]?.name;
     if (!bucket) throw new Error("모델을 저장할 버킷이 없어요.");
-    if (naver?.ok) { const spec = [...naver.specs].filter((item) => item.vram_per_gpu_gb >= 48).sort((a, b) => a.hourly_rate - b.hourly_rate)[0]; if (spec) environment = { provider: "naver", bucket, spec, launch: naver.launch_configs[0], key: naver.keys[0], volume: 50 }; }
-    if (!environment && kakao?.flavors?.length) { const flavor = [...kakao.flavors].filter((item) => item.vram_per_gpu_gb >= 48 && kakao.pricing?.gpu_hourly?.[item.name]).sort((a, b) => kakao.pricing.gpu_hourly[a.name] - kakao.pricing.gpu_hourly[b.name])[0], image = kakao.images?.find((item) => /nvidia/i.test(item.name || "")); if (flavor && image && kakao.keypairs?.[0] && kakao.subnets?.[0] && kakao.security_groups?.[0]) environment = { provider: "kakao", bucket, flavor, image, keypair: kakao.keypairs[0], subnet: kakao.subnets[0], securityGroup: kakao.security_groups[0], volume: 80 }; }
+    let kakaoFallback = null;
+    if (kakao?.flavors?.length) { const flavor = [...kakao.flavors].filter((item) => item.vram_per_gpu_gb >= 48 && kakao.pricing?.gpu_hourly?.[item.name]).sort((a, b) => kakao.pricing.gpu_hourly[a.name] - kakao.pricing.gpu_hourly[b.name])[0], image = kakao.images?.find((item) => /nvidia/i.test(item.name || "")); if (flavor && image && kakao.keypairs?.[0] && kakao.subnets?.[0] && kakao.security_groups?.[0]) kakaoFallback = { provider: "kakao", bucket, flavor, image, keypair: kakao.keypairs[0], subnet: kakao.subnets[0], securityGroup: kakao.security_groups[0], volume: 80 }; }
+    if (naver?.ok) { const spec = [...naver.specs].filter((item) => item.vram_per_gpu_gb >= 48).sort((a, b) => a.hourly_rate - b.hourly_rate)[0]; if (spec) environment = { provider: "naver", bucket, spec, launch: naver.launch_configs[0], key: naver.keys[0], volume: 50, kakaoFallback }; }
+    if (!environment) environment = kakaoFallback;
     if (!environment) throw new Error("사용 가능한 48GB 이상 GPU가 없어요.");
     return environment;
   }
@@ -65,9 +67,15 @@
 
   async function launch(job, password, maxMinutes, purpose) {
     currentJob = job; $("#homeProgress").hidden = false; $("#homeProgressTitle").textContent = "48GB GPU를 준비하고 있어요";
-    if (environment.provider === "naver") await api("/api/ncp-gpu", { method: "POST", body: JSON.stringify({ job_id: job.id, spec_code: environment.spec.serverSpecCode, vpc_no: environment.launch.vpc_no, subnet_no: environment.launch.subnet_no, login_key_name: environment.key.loginKeyName || environment.key.keyName, acg_no: environment.launch.acg_no, max_minutes: maxMinutes, volume_gb: 50, execution_password: password }) });
-    else await api("/api/cloud?action=create", { method: "POST", body: JSON.stringify({ job_id: job.id, purpose, flavor_id: environment.flavor.id, image_id: environment.image.id, subnet_id: environment.subnet.id, key_name: environment.keypair.name, security_group: environment.securityGroup.name, max_minutes: maxMinutes, volume_gb: 80, execution_password: password }) });
+    if (environment.provider === "naver") {
+      try { await api("/api/ncp-gpu", { method: "POST", body: JSON.stringify({ job_id: job.id, spec_code: environment.spec.serverSpecCode, vpc_no: environment.launch.vpc_no, subnet_no: environment.launch.subnet_no, login_key_name: environment.key.loginKeyName || environment.key.keyName, acg_no: environment.launch.acg_no, max_minutes: maxMinutes, volume_gb: 50, execution_password: password }) }); }
+      catch (error) { if (error.message !== "naver_gpu_quota_unavailable" || !environment.kakaoFallback) throw error; environment = environment.kakaoFallback; $("#homeProgressTitle").textContent = "카카오 48GB GPU로 자동 전환하고 있어요"; await launchKakao(job, password, maxMinutes, purpose); }
+    } else await launchKakao(job, password, maxMinutes, purpose);
     pollTimer = setInterval(pollJob, 10000); await pollJob();
+  }
+
+  async function launchKakao(job, password, maxMinutes, purpose) {
+    await api("/api/cloud?action=create", { method: "POST", body: JSON.stringify({ job_id: job.id, purpose, flavor_id: environment.flavor.id, image_id: environment.image.id, subnet_id: environment.subnet.id, key_name: environment.keypair.name, security_group: environment.securityGroup.name, max_minutes: maxMinutes, volume_gb: 80, execution_password: password }) });
   }
 
   function parseResult(text) { for (const line of text.split(/\r?\n/)) if (line.includes("CGR_INFERENCE ")) try { return JSON.parse(line.slice(line.indexOf("CGR_INFERENCE ") + 14)); } catch {} return null; }

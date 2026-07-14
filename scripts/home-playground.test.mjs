@@ -15,6 +15,8 @@ const js = fs.readFileSync(jsPath, "utf8");
 assert.match(js, /\/api\/login/);
 assert.match(js, /requestPassword/);
 assert.match(js, /\/api\/models/);
+assert.match(js, /naver_gpu_quota_unavailable/);
+assert.match(js, /kakaoFallback/);
 assert.match(api, /listModels/);
 assert.match(api, /models/);
 assert.doesNotMatch(api, /artifact_key:\s*model\.artifact_key|bucket:\s*model\.bucket/);
