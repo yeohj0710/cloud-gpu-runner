@@ -1,0 +1,17 @@
+{
+  "name": "웰니스박스 Cloud GPU Runner",
+  "short_name": "GPU Runner",
+  "description": "웰니스박스 클라우드 GPU 학습 및 크레딧 현황",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3182f6",
+  "icons": [
+    {
+      "src": "/assets/wellnessbox-logo.png",
+      "sizes": "1536x1536",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
