@@ -108,7 +108,9 @@ try {
   $dataKey = if ($DataPath) { Write-Host "Uploading data: $DataPath"; Send-CclFile $DataPath $bucket } else { '' }
   $created = Invoke-CclJson '/api/jobs' 'POST' @{ type = 'custom-gpu'; provider = $resolved; bucket = $bucket; code_key = $codeKey; data_key = $dataKey; command = $Command; output_path = $OutputPath }
   if ($resolved -eq 'naver') {
-    $null = Invoke-CclJson '/api/ncp-gpu' 'POST' @{ job_id = $created.job.id; spec_code = $spec.serverSpecCode; vpc_no = $launch.vpc_no; subnet_no = $launch.subnet_no; login_key_name = $naver.keys[0].loginKeyName; acg_no = $launch.acg_no; max_minutes = $Minutes; volume_gb = 50 }
+    $loginKeyName = if ($naver.keys[0].loginKeyName) { $naver.keys[0].loginKeyName } else { $naver.keys[0].keyName }
+    if (-not $loginKeyName) { throw 'NAVER login key name is missing.' }
+    $null = Invoke-CclJson '/api/ncp-gpu' 'POST' @{ job_id = $created.job.id; spec_code = $spec.serverSpecCode; vpc_no = $launch.vpc_no; subnet_no = $launch.subnet_no; login_key_name = $loginKeyName; acg_no = $launch.acg_no; max_minutes = $Minutes; volume_gb = 50 }
   } else {
     $null = Invoke-CclJson '/api/cloud?action=create' 'POST' @{ job_id = $created.job.id; purpose = 'local-project'; flavor_id = $flavor.id; image_id = $image.id; subnet_id = $kakao.subnets[0].id; key_name = $kakao.keypairs[0].name; security_group = $kakao.security_groups[0].name; max_minutes = $Minutes; volume_gb = $VolumeGB }
   }

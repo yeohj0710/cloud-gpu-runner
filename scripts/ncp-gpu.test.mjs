@@ -12,12 +12,14 @@ assert.deepEqual(buildLaunchConfigs(
 ), [{ vpc_no: "v1", subnet_no: "s1", acg_no: "a1", zone_code: undefined, label: "public · default" }]);
 const selected = selectNcpLaunchResources({
   subnets: [{ subnetNo: 101, vpcNo: 201 }], vpcs: [{ vpcNo: 201 }],
-  keys: [{ loginKeyName: "key" }], acgs: [{ accessControlGroupNo: 301, vpcNo: 201 }],
+  keys: [{ keyName: "key" }], acgs: [{ accessControlGroupNo: 301, vpcNo: 201 }],
   launch_configs: [{ subnet_no: 101, vpc_no: 201, acg_no: 301 }],
 }, { subnet_no: "101", vpc_no: "201", login_key_name: "key", acg_no: "301" });
 assert.equal(selected.subnet.subnetNo, 101);
 assert.equal(selected.vpc.vpcNo, 201);
 assert.equal(selected.acg.accessControlGroupNo, 301);
+assert.equal(selected.key.loginKeyName, "key");
+assert.equal(selectNcpLaunchResources({ subnets: [], vpcs: [], keys: [{ keyName: "key" }], acgs: [], launch_configs: [] }, { login_key_name: "" }).key, undefined);
 const path = ncpPath("/vserver/v2/getServerSpecList", { regionCode: "KR", serverImageNo: "123" });
 assert.ok(path.includes("regionCode=KR"));
 assert.ok(path.includes("serverImageNo=123"));
