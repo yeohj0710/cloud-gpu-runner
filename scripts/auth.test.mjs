@@ -1,8 +1,14 @@
 import assert from "node:assert/strict";
 import handler from "../api/login.js";
+import { isExecutionPassword, requireExecutionPassword } from "../lib/auth.js";
 
 process.env.APP_PASSWORD = "test-password";
 process.env.SESSION_SECRET = "test-session-secret-with-enough-entropy";
+process.env.EXECUTION_PASSWORD = "0903";
+
+assert.equal(isExecutionPassword("0903"), true);
+assert.equal(isExecutionPassword("903"), false);
+assert.throws(() => requireExecutionPassword("wrong"), /execution_password_invalid/);
 
 function response() {
   return { statusCode: 200, headers: {}, body: null, setHeader(key, value) { this.headers[key] = value; }, status(code) { this.statusCode = code; return this; }, json(value) { this.body = value; return this; } };

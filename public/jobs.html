@@ -94,6 +94,7 @@
             </p>
           </div>
           <div class="form">
+            <label>작업 유형<select id="taskMode"><option value="training">모델 학습</option><option value="inference">학습된 모델 추론</option></select><small id="taskModeHelp">학습 로그와 모델 파일을 결과 폴더에 저장하면 완료 후 함께 내려받을 수 있어요.</small></label>
             <label
               >실행 명령<textarea
                 id="command"
@@ -147,6 +148,7 @@
           </div>
         </div>
         <button id="run" class="primary">파일 올리고 GPU 실행</button>
+        <p class="billing-warning">실행 버튼을 누르면 비밀번호를 확인합니다. 확인 후 실제 GPU가 생성되고 크레딧이 차감됩니다.</p>
         <p id="message" role="status"></p>
       </section>
       <section class="band">
@@ -164,6 +166,16 @@
         </div>
       </section>
     </main>
+    <dialog id="executionDialog" aria-labelledby="executionTitle">
+      <form id="executionForm" method="dialog">
+        <p class="eyebrow">PAID EXECUTION</p>
+        <h2 id="executionTitle">실제 GPU를 실행할까요?</h2>
+        <p id="executionSummary" class="dialog-copy"></p>
+        <label>실행 비밀번호<input id="executionPassword" type="password" inputmode="numeric" autocomplete="off" maxlength="32" placeholder="비밀번호 입력" /></label>
+        <p id="executionError" class="dialog-error" role="alert"></p>
+        <div class="dialog-actions"><button id="executionCancel" type="button">취소</button><button class="primary" type="submit">비용 확인 후 실행</button></div>
+      </form>
+    </dialog>
     <script src="/jobs-app.js"></script>
   </body>
 </html>

@@ -1,4 +1,4 @@
-import { isAuthorized } from "../lib/auth.js";
+import { isAuthorized, isExecutionPassword } from "../lib/auth.js";
 import { bcs, cloud, token } from "../lib/kakao-cloud.js";
 import { jobToken, listJobs, updateJob } from "../lib/jobs.js";
 import { presignObject } from "../lib/ncp-storage.js";
@@ -139,6 +139,7 @@ export default async function handler(request, response) {
     }
     if (request.method === "POST" && action === "create") {
       const v = request.body || {};
+      if (!isExecutionPassword(v.execution_password)) return response.status(403).json({ error: "execution_password_invalid" });
       if (!v.job_id)
         return response.status(400).json({ error: "analysis_job_required" });
       if (

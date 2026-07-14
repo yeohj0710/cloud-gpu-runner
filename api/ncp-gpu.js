@@ -1,4 +1,4 @@
-import { isAuthorized } from "../lib/auth.js";
+import { isAuthorized, isExecutionPassword } from "../lib/auth.js";
 import { customWorkerScript } from "./cloud.js";
 import { bootstrapNcpGpu, createNcpGpu, deleteNcpGpu, ncpGpuReadiness, NCP_BLOCK_STORAGE_GIB_HOUR } from "../lib/ncp-gpu.js";
 import { listJobs, updateJob } from "../lib/jobs.js";
@@ -13,6 +13,7 @@ export default async function handler(request, response) {
     if (request.method !== "POST") return response.status(405).json({ error: "method_not_allowed" });
     if (String(request.query?.action || "") === "bootstrap") return response.json(await bootstrapNcpGpu("KR"));
     const value = request.body || {};
+    if (!isExecutionPassword(value.execution_password)) return response.status(403).json({ error: "execution_password_invalid" });
     const jobs = await listJobs();
     let job = jobs.find((item) => item.id === String(value.job_id || ""));
     if (!job) return response.status(404).json({ error: "job_not_found" });

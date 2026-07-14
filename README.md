@@ -41,6 +41,7 @@ C:\dev\cloud-gpu-runner 활용해서 GPU 학습 진행해
 - `/api/public-dashboard`: 민감 필드를 제거한 조회 전용 API
 - `/jobs`와 관리 API: 로그인 보호
 - GPU 실행·취소, 원본 명령, 작업 ID, 오류 원문, 저장 경로: 공개하지 않음
+- 실제 GPU 생성 직전 `EXECUTION_PASSWORD`를 다시 확인하며, 배포 환경에서는 `0903`으로 설정
 
 ## 크레딧
 
@@ -71,4 +72,4 @@ work_memory/         GPU 활용 모듈
 docs/, experiments/  아키텍처·비용 통제·연구 이력
 ```
 
-실제 키는 ignored `.env.local`에만 둡니다. 공개 데이터 또는 비민감 샘플만 원격으로 전송합니다.
+실제 키와 `EXECUTION_PASSWORD`는 ignored `.env.local` 및 Vercel 환경 변수에만 둡니다. 공개 데이터 또는 비민감 샘플만 원격으로 전송합니다.

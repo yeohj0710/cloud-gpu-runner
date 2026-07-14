@@ -34,6 +34,7 @@ function errorText(e) {
       ncp_gpu_network_configuration_missing:
         "네이버 VPC·Subnet·ACG·로그인 키가 필요해요.",
       input_not_found: "올린 파일을 찾지 못했어요.",
+      execution_password_invalid: "실행 비밀번호가 올바르지 않아요.",
     }[t] || t
   );
 }
@@ -176,7 +177,7 @@ async function calculate() {
       provider: activeProvider(),
       flavor: option.dataset.name,
       minutes: Number($("#minutes").value),
-      volume_gb: provider === "naver" ? 50 : Number($("#volume").value),
+      volume_gb: activeProvider() === "naver" ? 50 : Number($("#volume").value),
     }),
   });
   $("#costTotal").textContent = won(estimate.total);
@@ -196,6 +197,8 @@ async function run() {
     $("#message").textContent = "선택한 클라우드의 GPU 준비가 끝나지 않았어요.";
     return;
   }
+  const executionPassword = await requestExecutionPassword(provider);
+  if (!executionPassword) return;
   const button = $("#run");
   button.disabled = true;
   try {
@@ -212,6 +215,7 @@ async function run() {
         data_key: dataKey,
         command,
         output_path: $("#outputPath").value.trim() || "outputs",
+        task_mode: $("#taskMode").value,
       }),
     });
     const option = $("#flavor").selectedOptions[0];
@@ -228,6 +232,7 @@ async function run() {
           acg_no: launch.acg_no,
           max_minutes: Number($("#minutes").value),
           volume_gb: Number($("#volume").value),
+          execution_password: executionPassword,
         }),
       });
     } else {
@@ -244,6 +249,7 @@ async function run() {
           security_group: kakao.security_groups[0].name,
           max_minutes: Number($("#minutes").value),
           volume_gb: Number($("#volume").value),
+          execution_password: executionPassword,
         }),
       });
     }
@@ -258,6 +264,22 @@ async function run() {
     button.disabled = false;
   }
 }
+function requestExecutionPassword(provider) {
+  const dialog = $("#executionDialog");
+  $("#executionSummary").textContent = `${provider === "naver" ? "네이버클라우드" : "카카오클라우드"} GPU를 최대 ${$("#minutes").value}분 실행합니다. 예상 최대 비용은 ${$("#costTotal").textContent}이며 실제 크레딧이 차감됩니다.`;
+  $("#executionPassword").value = "";
+  $("#executionError").textContent = "";
+  dialog.showModal();
+  $("#executionPassword").focus();
+  return new Promise((resolve) => {
+    const finish = (value) => { $("#executionForm").removeEventListener("submit", submit); $("#executionCancel").removeEventListener("click", cancel); dialog.removeEventListener("cancel", cancel); if (dialog.open) dialog.close(); resolve(value); };
+    const submit = (event) => { event.preventDefault(); const value = $("#executionPassword").value.trim(); if (!value) { $("#executionError").textContent = "실행 비밀번호를 입력해주세요."; return; } finish(value); };
+    const cancel = (event) => { event.preventDefault(); finish(""); };
+    $("#executionForm").addEventListener("submit", submit);
+    $("#executionCancel").addEventListener("click", cancel);
+    dialog.addEventListener("cancel", cancel);
+  });
+}
 async function loadJobs() {
   const d = await api("/api/jobs"),
     items = d.items.filter((x) => x.type === "custom-gpu");
@@ -265,7 +287,7 @@ async function loadJobs() {
     ? items
         .map(
           (job) =>
-            `<article class="job"><div class="job-head"><div><h3>${safe(job.code_key?.split("/").pop() || "GPU 작업")}</h3><p>${safe(job.command)}</p></div><span class="status ${safe(job.status)}">${{ queued: "대기", provisioning: "GPU 생성 중", running: `실행 중 · ${{ bootstrap: "준비", code_download: "코드 받기", code_extract: "압축 풀기", data_download: "데이터 받기", command: "학습 실행" }[job.stage] || "시작"}`, completed: "완료", failed: "실패", cancelled: "취소" }[job.status] || safe(job.status)}</span></div><small>${job.provider === "naver" ? "네이버" : job.provider === "kakao" ? "카카오" : "공급자 선택 중"} · ${new Date(job.created_at).toLocaleString("ko-KR")} · ${safe(job.flavor_name || "GPU 배정 대기")}${job.usage_amount != null ? ` · 실제 비용 ${won(job.usage_amount)}` : ""}</small>${job.error ? `<p>오류: ${safe(job.error)}</p>` : ""}<div class="job-actions">${job.artifacts_ready ? `<a href="/api/jobs?action=result&id=${encodeURIComponent(job.id)}">결과 받기</a><a href="/api/jobs?action=log&id=${encodeURIComponent(job.id)}">로그 받기</a>` : ""}${["queued", "provisioning", "running"].includes(job.status) ? `<button data-cancel="${safe(job.id)}">실행 취소</button>` : ""}</div></article>`,
+            `<article class="job"><div class="job-head"><div><h3>${job.task_mode === "inference" ? "추론" : "학습"} · ${safe(job.code_key?.split("/").pop() || "GPU 작업")}</h3><p>${safe(job.command)}</p></div><span class="status ${safe(job.status)}">${{ queued: "대기", provisioning: "GPU 생성 중", running: `실행 중 · ${{ bootstrap: "준비", code_download: "코드 받기", code_extract: "압축 풀기", data_download: "데이터 받기", command: job.task_mode === "inference" ? "추론 실행" : "학습 실행" }[job.stage] || "시작"}`, completed: "완료", failed: "실패", cancelled: "취소" }[job.status] || safe(job.status)}</span></div><small>${job.provider === "naver" ? "네이버" : job.provider === "kakao" ? "카카오" : "공급자 선택 중"} · ${new Date(job.created_at).toLocaleString("ko-KR")} · ${safe(job.flavor_name || "GPU 배정 대기")}${job.usage_amount != null ? ` · 실제 비용 ${won(job.usage_amount)}` : ""}</small>${job.error ? `<p>오류: ${safe(job.error)}</p>` : ""}<div class="job-actions">${job.artifacts_ready ? `<a href="/api/jobs?action=result&id=${encodeURIComponent(job.id)}">결과 받기</a><a href="/api/jobs?action=log&id=${encodeURIComponent(job.id)}">로그 받기</a>` : ""}${["queued", "provisioning", "running"].includes(job.status) ? `<button data-cancel="${safe(job.id)}">실행 취소</button>` : ""}</div></article>`,
         )
         .join("")
     : `<p class="empty">아직 실행한 작업이 없어요.</p>`;
@@ -291,6 +313,11 @@ document
 $("#run").addEventListener("click", run);
 $("#setupNaver").addEventListener("click", setupNaver);
 $("#refresh").addEventListener("click", loadJobs);
+$("#taskMode").addEventListener("change", () => {
+  const inference = $("#taskMode").value === "inference";
+  $("#taskModeHelp").textContent = inference ? "ZIP에 학습된 모델과 추론 코드를 넣고, 입력 데이터는 데이터 파일로 올리세요." : "학습 로그와 모델 파일을 결과 폴더에 저장하면 완료 후 함께 내려받을 수 있어요.";
+  $("#command").placeholder = inference ? '예: pip install -r requirements.txt && python infer.py --model model.pt --input "$CGR_DATA_FILE" --output "$CGR_OUTPUT_DIR"' : '예: pip install -r requirements.txt && python train.py --data "$CGR_DATA_FILE" --output "$CGR_OUTPUT_DIR"';
+});
 $("#jobs").addEventListener("click", async (e) => {
   const id = e.target.dataset.cancel;
   if (!id) return;

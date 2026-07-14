@@ -16,6 +16,7 @@ const input = {
 };
 assert.equal(validateCustomJob(input).command, "python train.py");
 assert.equal(validateCustomJob({ ...input, provider: "naver" }).provider, "naver");
+assert.equal(validateCustomJob({ ...input, task_mode: "inference" }).taskMode, "inference");
 assert.equal(validateCustomJob({ ...input, provider: "invalid" }).provider, "auto");
 assert.throws(() => validateCustomJob({ ...input, output_path: "../escape" }), /unsafe_output_path/);
 assert.throws(() => validateCustomJob({ ...input, command: "python train.py\nrm -rf /" }), /unsafe_command/);
