@@ -1,5 +1,5 @@
 import { listJobs } from "../lib/jobs.js";
-import { CREDIT_EXPIRY, usageSummary } from "../lib/usage.js";
+import { CREDIT_EXPIRY, CREDIT_GRANTS, usageSummary } from "../lib/usage.js";
 import { ncp } from "../lib/ncp-cloud.js";
 
 function kind(command = "") {
@@ -32,6 +32,6 @@ export default async function handler(request, response) {
       amount: Number(event.amount || 0), created_at: event.created_at,
     }));
     response.setHeader("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
-    return response.json({ ok: true, credits: summary.credits, totals, remaining, categories: summary.categories, expiry: CREDIT_EXPIRY, jobs, events, updated_at: new Date().toISOString() });
+    return response.json({ ok: true, credits: summary.credits, totals, remaining, categories: summary.categories, expiry: CREDIT_EXPIRY, credit_grants: CREDIT_GRANTS, jobs, events, updated_at: new Date().toISOString() });
   } catch (error) { console.error("public-dashboard", error); return response.status(502).json({ error: "dashboard_unavailable" }); }
 }

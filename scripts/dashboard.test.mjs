@@ -22,6 +22,7 @@ assert.doesNotMatch(app, /\/api\/(usage|jobs)/);
 assert.match(app, /Math\.round\(usage\.remaining\.naver\)/);
 assert.match(app, /usage\.expiry/);
 assert.match(publicApi, /CREDIT_EXPIRY/);
+assert.match(publicApi, /CREDIT_GRANTS/);
 assert.match(publicApi, /cleanup_verified/);
 assert.doesNotMatch(publicApi, /command:\s*job\.command|id:\s*job\.id|error:\s*job\.error/);
 assert.match(middleware, /\/api\/public-dashboard/);
