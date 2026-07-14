@@ -10,6 +10,13 @@ function kind(command = "") {
   return "GPU 작업";
 }
 
+function playgroundErrorCode(error = "") {
+  if (/exit 127|pip: command not found/i.test(error)) return "runtime_setup_failed";
+  if (/quota|creation limit|3005004/i.test(error)) return "gpu_quota_unavailable";
+  if (/kakao_gpu_unavailable/i.test(error)) return "gpu_capacity_unavailable";
+  return error ? "worker_failed" : null;
+}
+
 export default async function handler(request, response) {
   if (request.method !== "GET") return response.status(405).json({ error: "method_not_allowed" });
   try {
@@ -22,7 +29,15 @@ export default async function handler(request, response) {
     } catch {}
     const totals = { ...summary.totals, naver: Math.max(actualNaver, summary.totals.naver) };
     const remaining = { naver: summary.credits.naver - totals.naver, kakao: summary.credits.kakao - totals.kakao };
-    const jobs = (await listJobs()).slice().reverse().filter((job) => job.type === "custom-gpu" || job.instance_id || job.usage_amount).slice(0, 20).map((job) => ({
+    const allJobs = (await listJobs()).slice().reverse();
+    const latestPlaygroundJob = allJobs.find((job) => job.preset_id === "qwen-lora-v1");
+    const playground_job = latestPlaygroundJob ? {
+      status: latestPlaygroundJob.status, task_mode: latestPlaygroundJob.task_mode, stage: latestPlaygroundJob.stage,
+      provider: latestPlaygroundJob.provider, flavor_name: latestPlaygroundJob.flavor_name,
+      usage_amount: latestPlaygroundJob.usage_amount == null ? null : Number(latestPlaygroundJob.usage_amount),
+      error_code: playgroundErrorCode(latestPlaygroundJob.error), created_at: latestPlaygroundJob.created_at, updated_at: latestPlaygroundJob.updated_at,
+    } : null;
+    const jobs = allJobs.filter((job) => job.type === "custom-gpu" || job.instance_id || job.usage_amount).slice(0, 20).map((job) => ({
       kind: kind(job.command), provider: job.provider, status: job.status,
       usage_seconds: Number(job.usage_seconds || 0), usage_amount: job.usage_amount == null ? null : Number(job.usage_amount),
       cleanup_verified: !job.instance_id || Boolean(job.instance_deleted_at && (!job.public_ip_id || job.public_ip_removed_at)),
@@ -42,6 +57,6 @@ export default async function handler(request, response) {
       created_at: model.created_at,
     }));
     response.setHeader("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
-    return response.json({ ok: true, credits: summary.credits, totals, remaining, categories: summary.categories, expiry: CREDIT_EXPIRY, credit_grants: CREDIT_GRANTS, jobs, events, models, updated_at: new Date().toISOString() });
+    return response.json({ ok: true, credits: summary.credits, totals, remaining, categories: summary.categories, expiry: CREDIT_EXPIRY, credit_grants: CREDIT_GRANTS, jobs, events, models, playground_job, updated_at: new Date().toISOString() });
   } catch (error) { console.error("public-dashboard", error); return response.status(502).json({ error: "dashboard_unavailable" }); }
 }

@@ -46,11 +46,11 @@ const script = customWorkerScript({
   result_key: "results/a.tar.gz", log_key: "logs/a.txt", max_minutes: 60,
 });
 assert.ok(script.includes("https://cloud-gpu-runner.vercel.app/api/worker-callback"), "worker callback must use the current protected production origin");
-for (const expected of ["timeout 60m", "CGR_DATA_DIR", "CGR_DATA_FILE", "shutdown -h now", "finish completed", "output directory is empty", "trap - ERR", "WORKDIR=/workspace", "execution timeout", "progress code_download", "progress command", "network activation timeout", "seq 1 150"]) {
+for (const expected of ["timeout 60m", "CGR_DATA_DIR", "CGR_DATA_FILE", "shutdown -h now", "finish completed", "output directory is empty", "trap - ERR", "WORKDIR=/workspace", "execution timeout", "progress code_download", "progress command", "network activation timeout", "seq 1 150", "if ! python3 -m pip --version", "apt-get install -y python3-pip"]) {
   assert.ok(script.includes(expected), `worker script missing ${expected}`);
 }
 assert.ok(!script.includes("tar -czf /tmp/result.tar.gz -C /workspace ."), "worker must never archive the entire workspace as fallback");
-assert.ok(!script.includes("apt-get"), "worker bootstrap must not reinstall the operating system package set for every job");
+assert.ok(script.indexOf("if ! python3 -m pip --version") < script.indexOf("apt-get install -y python3-pip"), "pip installation must be conditional");
 assert.ok(script.includes("--data-binary @-"), "callbacks must send JSON through stdin without broken nested shell quotes");
 assert.ok(!script.includes('-d "{"status"'), "worker must not generate syntactically broken nested JSON quotes");
 assert.ok(Buffer.byteLength(script, "utf8") < 16 * 1024, "cloud-init must stay below Kakao's 16KB user_data limit");

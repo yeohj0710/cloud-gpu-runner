@@ -67,6 +67,11 @@ mapfile -t roots < <(find /workspace -mindepth 1 -maxdepth 1 -type d ! -name inp
 files=$(find /workspace -mindepth 1 -maxdepth 1 -type f | wc -l)
 if [ "\${#roots[@]}" = 1 ] && [ "$files" = 0 ]; then WORKDIR="\${roots[0]}"; fi
 cd "$WORKDIR"
+progress runtime_setup
+if ! python3 -m pip --version >/dev/null 2>&1; then
+  apt-get update
+  DEBIAN_FRONTEND=noninteractive apt-get install -y python3-pip
+fi
 COMMAND=$(printf '%s' '${command64}' | base64 -d)
 progress command
 timeout ${Math.min(1440, Math.max(15, Number(job.max_minutes) || 60))}m bash -lc "$COMMAND"
