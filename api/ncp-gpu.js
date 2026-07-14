@@ -2,6 +2,8 @@ import { isAuthorized } from "../lib/auth.js";
 import { customWorkerScript } from "./cloud.js";
 import { bootstrapNcpGpu, createNcpGpu, deleteNcpGpu, ncpGpuReadiness, NCP_BLOCK_STORAGE_GIB_HOUR } from "../lib/ncp-gpu.js";
 import { listJobs, updateJob } from "../lib/jobs.js";
+import { estimateProviderGpu } from "../lib/usage.js";
+import { assertNoOtherActiveGpuJob, assertProviderCanSpend } from "../lib/spend-guard.js";
 
 export default async function handler(request, response) {
   if (!await isAuthorized(new Request("https://cloud-gpu-runner/api/ncp-gpu", { headers: { cookie: request.headers.cookie || "" } }))) return response.status(401).json({ error: "unauthorized" });
@@ -10,10 +12,13 @@ export default async function handler(request, response) {
     if (request.method !== "POST") return response.status(405).json({ error: "method_not_allowed" });
     if (String(request.query?.action || "") === "bootstrap") return response.json(await bootstrapNcpGpu("KR"));
     const value = request.body || {};
-    let job = (await listJobs()).find((item) => item.id === String(value.job_id || ""));
+    const jobs = await listJobs();
+    let job = jobs.find((item) => item.id === String(value.job_id || ""));
     if (!job) return response.status(404).json({ error: "job_not_found" });
     if (job.status !== "queued") return response.status(409).json({ error: "job_not_queued" });
     const maxMinutes = Math.min(1440, Math.max(15, Number(value.max_minutes) || 60));
+    assertNoOtherActiveGpuJob(jobs, job.id);
+    await assertProviderCanSpend("naver", estimateProviderGpu("naver", String(value.spec_code || ""), maxMinutes, 50).total);
     job = await updateJob(job.id, { status: "provisioning", provider: "naver", provisioning_nonce: crypto.randomUUID() });
     const requestHost = String(request.headers.host || "").toLowerCase();
     const baseUrl = /^[a-z0-9.-]+\.vercel\.app$/.test(requestHost) ? `https://${requestHost}` : "https://cloud-gpu-runner.vercel.app";

@@ -2,7 +2,8 @@ import { isAuthorized } from "../lib/auth.js";
 import { bcs, cloud, token } from "../lib/kakao-cloud.js";
 import { jobToken, listJobs, updateJob } from "../lib/jobs.js";
 import { presignObject } from "../lib/ncp-storage.js";
-import { addUsage, KAKAO_GPU_HOURLY } from "../lib/usage.js";
+import { addUsage, estimateProviderGpu, KAKAO_GPU_HOURLY } from "../lib/usage.js";
+import { assertNoOtherActiveGpuJob, assertProviderCanSpend } from "../lib/spend-guard.js";
 import { safeInstanceDescription } from "../lib/cloud-metadata.js";
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -164,6 +165,9 @@ export default async function handler(request, response) {
         1440,
         Math.max(15, Number(v.max_minutes) || 60),
       );
+      assertNoOtherActiveGpuJob(await listJobs(), job.id);
+      const selectedFlavorName = ((await bcs("flavors?instance_type=gpu&limit=100")).flavors || []).find((flavor) => flavor.id === v.flavor_id)?.name;
+      await assertProviderCanSpend("kakao", estimateProviderGpu("kakao", selectedFlavorName, maxMinutes, Math.max(50, Number(v.volume_gb) || 50)).total);
       const requestHost = String(request.headers.host || "").toLowerCase();
       const baseUrl = /^[a-z0-9.-]+\.vercel\.app$/.test(requestHost) ? `https://${requestHost}` : "https://cloud-gpu-runner.vercel.app";
       const rawScript = job?.type === "custom-gpu" ? customWorkerScript({ ...job, max_minutes: maxMinutes }, baseUrl) : workerScript(job, baseUrl);

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { buildLaunchConfigs, NCP_GPU_HOURLY, NCP_BLOCK_STORAGE_GIB_HOUR, NCP_PUBLIC_IP_HOURLY } from "../lib/ncp-gpu.js";
+import { buildLaunchConfigs, selectNcpLaunchResources, NCP_GPU_HOURLY, NCP_BLOCK_STORAGE_GIB_HOUR, NCP_PUBLIC_IP_HOURLY } from "../lib/ncp-gpu.js";
 import { ncpPath } from "../lib/ncp-cloud.js";
 import { gpuCost } from "../lib/gpu-resources.js";
 
@@ -10,6 +10,14 @@ assert.deepEqual(buildLaunchConfigs(
   [{ subnetNo: "s1", vpcNo: "v1", subnetName: "public", subnetType: { code: "PUBLIC" } }, { subnetNo: "s2", vpcNo: "v2", subnetName: "private", subnetType: { code: "PRIVATE" } }],
   [{ accessControlGroupNo: "a1", accessControlGroupName: "default", vpcNo: "v1" }, { accessControlGroupNo: "a2", accessControlGroupName: "wrong", vpcNo: "v3" }],
 ), [{ vpc_no: "v1", subnet_no: "s1", acg_no: "a1", zone_code: undefined, label: "public · default" }]);
+const selected = selectNcpLaunchResources({
+  subnets: [{ subnetNo: 101, vpcNo: 201 }], vpcs: [{ vpcNo: 201 }],
+  keys: [{ loginKeyName: "key" }], acgs: [{ accessControlGroupNo: 301, vpcNo: 201 }],
+  launch_configs: [{ subnet_no: 101, vpc_no: 201, acg_no: 301 }],
+}, { subnet_no: "101", vpc_no: "201", login_key_name: "key", acg_no: "301" });
+assert.equal(selected.subnet.subnetNo, 101);
+assert.equal(selected.vpc.vpcNo, 201);
+assert.equal(selected.acg.accessControlGroupNo, 301);
 const path = ncpPath("/vserver/v2/getServerSpecList", { regionCode: "KR", serverImageNo: "123" });
 assert.ok(path.includes("regionCode=KR"));
 assert.ok(path.includes("serverImageNo=123"));

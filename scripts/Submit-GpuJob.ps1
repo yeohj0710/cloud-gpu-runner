@@ -80,6 +80,7 @@ if ($resolved -eq 'naver') {
 Write-Host ("Provider: {0}; GPU: {1}; maximum runtime: {2} minutes" -f $resolved, $selectedGpu, $Minutes)
 Write-Host ("Estimated maximum cost: {0:N0} KRW + VAT; estimated credit remaining: {1:N0} KRW" -f $estimate.total, $remaining)
 if ([decimal]$estimate.total -gt $MaxEstimatedCostKRW) { throw "Estimated cost $($estimate.total) KRW exceeds hard limit $MaxEstimatedCostKRW KRW." }
+if ([decimal]$remaining -lt ([decimal]$estimate.total + 1000)) { throw "Remaining credit cannot cover estimated maximum plus 1,000 KRW safety reserve." }
 if (-not $ApproveEstimatedCost) { throw 'Cost approval required. Rerun with -ApproveEstimatedCost only after approval.' }
 
 $etc = Join-Path $root 'etc'

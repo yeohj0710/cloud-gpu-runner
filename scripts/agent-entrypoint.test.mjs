@@ -16,6 +16,7 @@ assert.match(entrypoint, /MaxEstimatedCostKRW = 2000/);
 assert.match(entrypoint, /Submit-GpuJob\.ps1/);
 assert.doesNotMatch(entrypoint, /wellnessbox/i);
 assert.match(submit, /exceeds hard limit/);
+assert.match(submit, /cannot cover estimated maximum/);
 assert.match(submit, /action=cancel/);
 assert.match(submit, /result\.tar\.gz/);
 assert.match(submit, /instance_deleted_at/);
