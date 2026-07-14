@@ -8,11 +8,13 @@
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="/dashboard.css" />
     <link rel="stylesheet" href="/dashboard-improvements.css" />
+    <link rel="stylesheet" href="/home-playground.css?v=1" />
+    <style>.home-playground [hidden]{display:none!important}</style>
   </head>
   <body class="loading">
     <header class="topbar">
       <a class="brand company-brand" href="/" aria-label="웰니스박스 클라우드 크레딧 홈"><img src="/assets/wellnessbox-logo.png" alt="WELLNESSBOX" /><span><small>Cloud Credit</small></span></a>
-      <div class="top-actions"><span class="live"><i></i> 공개 현황</span><button id="refresh" type="button">새로고침</button><a class="admin-link" href="/jobs">관리자</a></div>
+      <div class="top-actions"><span class="live"><i></i> 공개 현황</span><a class="admin-link" href="#ai-playground">AI 놀이터</a><button id="refresh" type="button">새로고침</button></div>
     </header>
 
     <main>
@@ -37,6 +39,34 @@
         </div>
       </section>
 
+      <section id="ai-playground" class="home-playground" aria-labelledby="playgroundTitle">
+        <div class="playground-inner">
+          <div class="playground-hero">
+            <div><p class="eyebrow">AI PLAYGROUND</p><h2 id="playgroundTitle">학습한 AI를 쌓고<br />바로 대화해보세요</h2><p>준비할 파일이나 코드는 없어요. 버튼을 누르면 48GB 이상 GPU가 Qwen 7B 모델을 학습하고, 완료된 모델은 이곳에 계속 보관돼요.</p></div>
+            <article class="experiment-card">
+              <div class="experiment-top"><span>QWEN 2.5 · 7B</span><b>48GB+ GPU</b></div>
+              <h3>한국어 지시 수행 LoRA 학습</h3>
+              <p>KoAlpaca 2,048개 · BF16 · LoRA r=32 · 최대 60분</p>
+              <dl><div><dt>모델 크기</dt><dd>76억 파라미터</dd></div><div><dt>학습 난이도</dt><dd>고성능 GPU 맞춤</dd></div><div><dt>예상 비용</dt><dd>실행 직전 확인</dd></div></dl>
+              <button id="playgroundTrain" class="primary-action" type="button">새 7B 모델 학습하기</button>
+              <p id="playgroundMessage" class="action-message" aria-live="polite"></p>
+            </article>
+          </div>
+          <div class="model-library">
+            <div class="library-head"><div><span>SAVED MODELS</span><h3>완료된 모델</h3></div><p>학습이 끝날 때마다 새 버전으로 누적돼요.</p></div>
+            <div id="homeModelList" class="home-model-list"><p class="playground-empty">저장된 모델을 확인하고 있어요.</p></div>
+          </div>
+          <section id="homeInference" class="home-inference" hidden>
+            <div><span>INFERENCE</span><h3 id="homeInferenceTitle">저장된 모델과 대화하기</h3><p>질문을 입력해 보세요. 실행 버튼을 누를 때만 비밀번호를 확인해요.</p></div>
+            <textarea id="homePrompt" rows="4" placeholder="예: 건강한 수면 습관을 세 가지로 정리해줘."></textarea>
+            <button id="playgroundInfer" class="primary-action" type="button">이 모델로 추론하기</button>
+            <p id="homeInferenceMessage" class="action-message" aria-live="polite"></p>
+            <article id="homeAnswer" class="home-answer" hidden><span>MODEL ANSWER</span><p id="homeAnswerText"></p><small id="homeAnswerMeta"></small></article>
+          </section>
+          <section id="homeProgress" class="home-progress" hidden><i></i><div><b id="homeProgressTitle">GPU를 준비하고 있어요</b><p id="homeProgressCopy">완료될 때까지 이 화면에서 상태를 확인할 수 있어요.</p></div></section>
+        </div>
+      </section>
+
       <section class="jobs-section" aria-labelledby="jobsTitle">
         <div class="section-head"><div><p class="eyebrow">GPU JOBS</p><h2 id="jobsTitle">최근 GPU 작업</h2></div><div class="filter" role="group" aria-label="작업 필터"><button class="active" data-filter="all">전체</button><button data-filter="running">실행 중</button><button data-filter="completed">완료</button><button data-filter="failed">실패</button></div></div>
         <div class="table-wrap"><table><thead><tr><th>작업 유형</th><th>공급자</th><th>상태</th><th>실행시간</th><th>실제 비용</th><th>자원 반납</th><th>시작 시각</th></tr></thead><tbody id="jobRows"></tbody></table></div>
@@ -50,8 +80,10 @@
       </section>
     </main>
 
-    <footer><span>주식회사 웰니스박스 · WELLNESSBOX Inc.</span><a href="/jobs">관리자 페이지</a><a href="https://github.com/yeohj0710/cloud-gpu-runner">GitHub</a></footer>
+    <footer><span>주식회사 웰니스박스 · WELLNESSBOX Inc.</span><a href="#ai-playground">AI 놀이터</a><a href="https://github.com/yeohj0710/cloud-gpu-runner">GitHub</a></footer>
+    <dialog id="playgroundPasswordDialog" class="password-dialog"><form id="playgroundPasswordForm" method="dialog"><button id="playgroundPasswordClose" class="dialog-close" type="button" aria-label="닫기">×</button><span>PAID GPU RUN</span><h2>실행 비밀번호</h2><p id="playgroundPasswordSummary">실제 크레딧이 사용되는 작업이에요.</p><label for="playgroundPassword">비밀번호</label><input id="playgroundPassword" type="password" inputmode="numeric" autocomplete="current-password" placeholder="비밀번호 입력" /><p id="playgroundPasswordError" class="dialog-error" aria-live="polite"></p><button class="primary-action" type="submit">확인하고 실행</button></form></dialog>
     <div id="errorToast" class="toast" role="alert" hidden></div>
     <script src="/app.js"></script>
+    <script src="/home-playground.js?v=1"></script>
   </body>
 </html>

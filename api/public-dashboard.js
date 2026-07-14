@@ -1,6 +1,7 @@
 import { listJobs } from "../lib/jobs.js";
 import { CREDIT_EXPIRY, CREDIT_GRANTS, usageSummary } from "../lib/usage.js";
 import { ncp } from "../lib/ncp-cloud.js";
+import { listModels } from "../lib/models.js";
 
 function kind(command = "") {
   if (/smoke\.py/i.test(command)) return "GPU 연결 점검";
@@ -31,7 +32,16 @@ export default async function handler(request, response) {
       provider: event.provider, category: event.category === "gpu" ? "GPU 실행" : "인프라 사용",
       amount: Number(event.amount || 0), created_at: event.created_at,
     }));
+    let registeredModels = [];
+    try { registeredModels = await listModels(); } catch {}
+    const models = registeredModels.slice().reverse().map((model) => ({
+      id: model.id, name: model.name, version: model.version, base_model: model.base_model,
+      method: model.method, dataset: model.dataset, provider: model.provider, gpu: model.gpu,
+      runtime_seconds: Number(model.runtime_seconds || 0), cost_krw: model.cost_krw == null ? null : Number(model.cost_krw),
+      training: model.training ? { samples: model.training.samples, steps: model.training.steps, train_loss: model.training.train_loss, peak_vram_gb: model.training.peak_vram_gb } : undefined,
+      created_at: model.created_at,
+    }));
     response.setHeader("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
-    return response.json({ ok: true, credits: summary.credits, totals, remaining, categories: summary.categories, expiry: CREDIT_EXPIRY, credit_grants: CREDIT_GRANTS, jobs, events, updated_at: new Date().toISOString() });
+    return response.json({ ok: true, credits: summary.credits, totals, remaining, categories: summary.categories, expiry: CREDIT_EXPIRY, credit_grants: CREDIT_GRANTS, jobs, events, models, updated_at: new Date().toISOString() });
   } catch (error) { console.error("public-dashboard", error); return response.status(502).json({ error: "dashboard_unavailable" }); }
 }
