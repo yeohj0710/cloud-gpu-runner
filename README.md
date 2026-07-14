@@ -6,6 +6,8 @@ The local baseline is an RTX 5070 Ti with 16GB VRAM. Paid cloud GPU is blocked w
 
 NAVER Cloud와 KakaoCloud GPU에서 Python 학습·대량 추론을 실행하는 웰니스박스 공용 실행기입니다. 프로젝트 분석, 비용 예측, 업로드, 실행, 결과 회수, 실제 비용 기록, GPU·공인 IP·임시 디스크 반납을 한 흐름으로 처리합니다.
 
+웹 `/jobs`는 별도 파일이나 명령 준비 없이 `AI 학습 시작하기`만 누르면 MNIST 모델을 실제 GPU에서 학습하고, 정확도와 추론 결과를 화면에서 확인하는 준비형 playground입니다. 유료 GPU 생성 직전 실행 비밀번호를 다시 확인합니다.
+
 이 저장소가 유일한 기준입니다.
 
 - 로컬 경로: `C:\dev\cloud-gpu-runner`

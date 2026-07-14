@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync, statSync } from "node:fs";
 import { validateCustomJob } from "../lib/jobs.js";
 import { customWorkerScript } from "../api/cloud.js";
 import { estimateGpu, estimateProviderGpu } from "../lib/usage.js";
@@ -20,6 +21,12 @@ assert.equal(validateCustomJob({ ...input, task_mode: "inference" }).taskMode, "
 assert.equal(validateCustomJob({ ...input, provider: "invalid" }).provider, "auto");
 assert.throws(() => validateCustomJob({ ...input, output_path: "../escape" }), /unsafe_output_path/);
 assert.throws(() => validateCustomJob({ ...input, command: "python train.py\nrm -rf /" }), /unsafe_command/);
+
+const preset = readFileSync(new URL("../examples/mnist-playground/train_and_infer.py", import.meta.url), "utf8");
+for (const marker of ["CGR_METRIC", "CGR_PREDICTION", "CGR_SUMMARY", "torch.cuda.is_available", "model.pt", "metrics.json", "predictions.json"]) assert.ok(preset.includes(marker), `MNIST preset missing ${marker}`);
+assert.ok(statSync(new URL("../public/playground/mnist-playground.zip", import.meta.url)).size > 1000, "one-click preset ZIP must be shipped with the site");
+const jobsApi = readFileSync(new URL("../api/jobs.js", import.meta.url), "utf8");
+assert.ok(jobsApi.includes('action === "log-text"'), "completed experiment logs must be readable in the result UI");
 
 const script = customWorkerScript({
   id: "job-1", bucket: "bucket", ...input,

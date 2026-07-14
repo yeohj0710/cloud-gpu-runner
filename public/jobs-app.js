@@ -1,272 +1,74 @@
-const $ = (s) => document.querySelector(s);
-let bucket = "",
-  kakao = null,
-  naver = null,
-  estimate = null;
-const safe = (v) =>
-  String(v ?? "").replace(
-    /[&<>"']/g,
-    (c) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
-        c
-      ],
-  );
-const won = (v) =>
-  `${Number(v || 0).toLocaleString("ko-KR", { maximumFractionDigits: 2 })}원`;
+const $ = (selector) => document.querySelector(selector);
+const safe = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
+const won = (value) => `${Number(value || 0).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}원`;
+let environment = null;
+let bucket = "";
+let currentJob = null;
+let pollTimer = null;
+
 async function api(url, options = {}) {
-  const r = await fetch(url, {
-    headers: { "content-type": "application/json" },
-    ...options,
-  });
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(d.error || `요청 실패 (${r.status})`);
-  return d;
+  const response = await fetch(url, { headers: { "content-type": "application/json" }, ...options });
+  if (response.status === 401) { location.replace("/login.html"); throw new Error("로그인이 필요해요."); }
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || `요청 실패 (${response.status})`);
+  return data;
 }
-function errorText(e) {
-  const t = String(e.message || e);
-  return (
-    {
-      code_and_command_required: "코드 파일과 실행 명령을 확인해주세요.",
-      code_archive_required: "코드는 ZIP 또는 tar.gz 파일이어야 해요.",
-      missing_configuration: "GPU 실행 환경 설정이 부족해요.",
-      ncp_gpu_spec_unavailable:
-        "현재 계정에서 선택한 네이버 GPU를 만들 수 없어요.",
-      ncp_gpu_network_configuration_missing:
-        "네이버 VPC·Subnet·ACG·로그인 키가 필요해요.",
-      input_not_found: "올린 파일을 찾지 못했어요.",
-      execution_password_invalid: "실행 비밀번호가 올바르지 않아요.",
-    }[t] || t
-  );
+
+function errorText(error) {
+  const text = String(error?.message || error);
+  return ({ execution_password_invalid: "실행 비밀번호가 올바르지 않아요.", another_gpu_job_active: "이미 실행 중인 GPU 작업이 있어요.", credit_insufficient: "남은 크레딧이 예상 비용보다 부족해요.", credit_expired: "사용 가능한 크레딧이 만료됐어요.", missing_configuration: "GPU 실행 환경 준비가 부족해요." }[text] || text);
 }
-function selectedMode() {
-  return (
-    document.querySelector('input[name="provider"]:checked')?.value || "auto"
-  );
+
+async function loadEnvironment() {
+  const [storage, naver, kakao] = await Promise.all([
+    api("/api/ncp-storage?action=buckets"),
+    api("/api/ncp-gpu").catch(() => null),
+    api("/api/cloud?action=readiness").catch(() => null),
+  ]);
+  bucket = storage.items.find((item) => /artifact|cloud-gpu|work-memory/i.test(item.name))?.name || storage.items[0]?.name || "";
+  if (!bucket) throw new Error("실험 결과를 저장할 버킷이 없어요.");
+
+  if (naver?.ok) {
+    const spec = [...naver.specs].filter((item) => item.vram_per_gpu_gb >= 48).sort((a, b) => a.hourly_rate - b.hourly_rate)[0];
+    if (spec) environment = { provider: "naver", spec, launch: naver.launch_configs[0], key: naver.keys[0], minutes: 30, volume: 50 };
+  }
+  if (!environment && kakao?.flavors?.length) {
+    const flavor = [...kakao.flavors].filter((item) => item.vram_per_gpu_gb >= 48 && kakao.pricing?.gpu_hourly?.[item.name]).sort((a, b) => kakao.pricing.gpu_hourly[a.name] - kakao.pricing.gpu_hourly[b.name])[0];
+    const image = kakao.images?.find((item) => /nvidia/i.test(item.name || ""));
+    if (flavor && image && kakao.keypairs?.[0] && kakao.subnets?.[0]) environment = { provider: "kakao", flavor, image, keypair: kakao.keypairs[0], subnet: kakao.subnets[0], securityGroup: kakao.security_groups[0], minutes: 30, volume: 80 };
+  }
+  if (!environment) throw new Error("지금 사용할 수 있는 48GB 이상 GPU가 없어요.");
+
+  const flavor = environment.provider === "naver" ? environment.spec.serverSpecCode : environment.flavor.name;
+  const estimate = await api("/api/estimate?type=gpu", { method: "POST", body: JSON.stringify({ provider: environment.provider, flavor, minutes: environment.minutes, volume_gb: environment.volume }) });
+  environment.estimate = estimate;
+  const providerName = environment.provider === "naver" ? "네이버클라우드" : "카카오클라우드";
+  const gpuName = environment.provider === "naver" ? environment.spec.serverSpecCode : environment.flavor.name;
+  $("#costTotal").textContent = won(estimate.total);
+  $("#providerLine").textContent = `${providerName} · ${gpuName} · 최대 30분 후 자동 종료`;
+  $("#readyBadge").textContent = "GPU 준비됨";
+  $("#experimentState").textContent = "바로 실행 가능";
+  $("#experimentState").classList.add("ready");
+  $("#run").disabled = false;
 }
-function activeProvider() {
-  const mode = selectedMode();
-  return mode === "auto" ? (naver?.ok ? "naver" : "kakao") : mode;
-}
-function providerReady(provider) {
-  return provider === "naver" ? Boolean(naver?.ok) : Boolean(kakao?.ready);
-}
-function updateProviderCards() {
-  const naverText = naver?.ok
-    ? `사용 가능 · ${naver.specs.length}개 사양 · 7/31 만료분 우선`
-    : `준비 필요${naver?.missing?.length ? ` · ${naver.missing.join(", ")}` : ""}`;
-  $("#naverState").textContent = naverText;
-  $("#setupNaver").classList.toggle("hidden", Boolean(naver?.ok));
-  $("#kakaoState").textContent = kakao?.ready
-    ? `사용 가능 · ${kakao.flavors.length}개 사양 · 2027/5/31 만료`
-    : "준비 필요";
-  $("#autoState").textContent = naver?.ok
-    ? "네이버 우선 선택 · 실패 시 카카오를 직접 선택"
-    : "네이버 미준비 · 카카오 선택";
-  const provider = activeProvider();
-  $("#providerDecision").textContent =
-    `이번 작업: ${provider === "naver" ? "네이버클라우드" : "카카오클라우드"} GPU`;
-  $("#readyBadge").textContent = providerReady(provider)
-    ? `${provider === "naver" ? "네이버" : "카카오"} GPU 준비됨`
-    : "GPU 설정 확인 필요";
-  loadFlavors();
-}
-function loadFlavors() {
-  const provider = activeProvider();
-  if (provider === "naver") $("#volume").value = "50";
-  else if ($("#volume").value === "50") $("#volume").value = "80";
-  const rows =
-    provider === "naver"
-      ? (naver?.specs || []).map((x) => ({
-          id: x.serverSpecCode,
-          name: x.serverSpecCode,
-          label: x.label,
-          rate: x.hourly_rate,
-        }))
-      : (kakao?.flavors || [])
-          .map((x) => ({
-            id: x.id,
-            name: x.name,
-            label: `NVIDIA ${String(x.hw_name || "GPU").toUpperCase()} ${x.hw_count || 1}개`,
-            rate: kakao.pricing.gpu_hourly[x.name],
-          }))
-          .filter((x) => x.rate)
-          .sort((a, b) => a.rate - b.rate);
-  $("#flavor").innerHTML = rows
-    .map(
-      (x) =>
-        `<option value="${safe(x.id)}" data-name="${safe(x.name)}">${safe(x.name)} · ${safe(x.label)} · 시간당 ${won(x.rate)}</option>`,
-    )
-    .join("");
-  $("#run").disabled = !providerReady(provider) || !rows.length;
-  calculate().catch((e) => ($("#message").textContent = errorText(e)));
-}
-async function upload(file, prefix) {
-  if (!file) return "";
-  const key = `gpu-workbench/${Date.now()}-${crypto.randomUUID()}-${file.name.replace(/[^\p{L}\p{N}._-]/gu, "-")}`;
-  $("#uploadState").textContent = `${file.name} 올리는 중…`;
-  const signed = await api("/api/ncp-storage?action=upload-url", {
-    method: "POST",
-    body: JSON.stringify({ bucket, key }),
-  });
-  const put = await fetch(signed.url, {
-    method: "PUT",
-    body: file,
-    headers: { "content-type": file.type || "application/octet-stream" },
-  });
-  if (!put.ok) throw new Error(`${prefix} 업로드 실패`);
-  await api("/api/ncp-storage?action=upload-complete", {
-    method: "POST",
-    body: JSON.stringify({ bucket, key, size: file.size }),
-  });
+
+async function uploadPreset() {
+  $("#message").textContent = "준비된 학습 코드를 올리고 있어요…";
+  const response = await fetch("/playground/mnist-playground.zip");
+  if (!response.ok) throw new Error("준비된 실험 파일을 불러오지 못했어요.");
+  const blob = await response.blob();
+  const key = `gpu-workbench/${Date.now()}-${crypto.randomUUID()}-mnist-playground.zip`;
+  const signed = await api("/api/ncp-storage?action=upload-url", { method: "POST", body: JSON.stringify({ bucket, key }) });
+  const uploaded = await fetch(signed.url, { method: "PUT", body: blob, headers: { "content-type": "application/zip" } });
+  if (!uploaded.ok) throw new Error("학습 코드 준비에 실패했어요.");
+  await api("/api/ncp-storage?action=upload-complete", { method: "POST", body: JSON.stringify({ bucket, key, size: blob.size }) });
   return key;
 }
-async function loadEnvironment() {
-  const [b, k, n] = await Promise.all([
-    api("/api/ncp-storage?action=buckets"),
-    api("/api/cloud?action=readiness").catch((error) => ({ error })),
-    api("/api/ncp-gpu").catch((error) => ({ error })),
-  ]);
-  bucket =
-    b.items.find((x) => /artifact|cloud-gpu|work-memory/i.test(x.name))
-      ?.name || b.items[0]?.name;
-  if (!bucket) throw new Error("네이버 저장소 버킷이 없어요.");
-  const flavors = (k.flavors || []).filter(
-    (x) =>
-      k.pricing?.gpu_hourly?.[x.name] &&
-      String(x.manufacturer).toLowerCase() === "nvidia",
-  );
-  kakao = {
-    ...k,
-    flavors,
-    ready: Boolean(
-      flavors.length &&
-        k.images?.some((x) => /nvidia/i.test(x.name || "")) &&
-        k.keypairs?.length &&
-        k.subnets?.length,
-    ),
-  };
-  naver = n;
-  updateProviderCards();
-}
-function savePrivateKey(value) {
-  if (!value) return;
-  const blob = new Blob([value], { type: "application/x-pem-file" });
-  const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = "cgr-gpu.pem"; link.click(); URL.revokeObjectURL(link.href);
-}
-async function setupNaver() {
-  const button = $("#setupNaver"); button.disabled = true;
-  try {
-    for (let attempt = 0; attempt < 20; attempt += 1) {
-      const result = await api("/api/ncp-gpu?action=bootstrap", { method: "POST", body: "{}" });
-      savePrivateKey(result.private_key);
-      $("#setupNaverState").textContent = result.message || (result.ok ? "네이버 GPU 환경 준비가 끝났어요." : "준비 상태를 확인하는 중…");
-      if (result.ok) { naver = result; updateProviderCards(); return; }
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-    }
-    throw new Error("네이버 환경 생성이 오래 걸리고 있어요. 잠시 후 다시 눌러주세요.");
-  } catch (error) { $("#setupNaverState").textContent = errorText(error); }
-  finally { button.disabled = false; }
-}
-async function calculate() {
-  const option = $("#flavor").selectedOptions[0];
-  if (!option) return;
-  estimate = await api("/api/estimate?type=gpu", {
-    method: "POST",
-    body: JSON.stringify({
-      type: "gpu",
-      provider: activeProvider(),
-      flavor: option.dataset.name,
-      minutes: Number($("#minutes").value),
-      volume_gb: activeProvider() === "naver" ? 50 : Number($("#volume").value),
-    }),
-  });
-  $("#costTotal").textContent = won(estimate.total);
-  $("#costBreakdown").textContent =
-    `GPU ${won(estimate.gpu)} + 디스크 ${won(estimate.disk)} + 임시 IP ${won(estimate.public_ip)} + 저장소 요청 약 ${won(estimate.object_requests)}`;
-}
-async function run() {
-  const code = $("#codeFile").files[0],
-    data = $("#dataFile").files[0],
-    command = $("#command").value.trim();
-  if (!code || !command) {
-    $("#message").textContent = "코드 파일과 실행 명령을 먼저 넣어주세요.";
-    return;
-  }
-  const provider = activeProvider();
-  if (!providerReady(provider)) {
-    $("#message").textContent = "선택한 클라우드의 GPU 준비가 끝나지 않았어요.";
-    return;
-  }
-  const executionPassword = await requestExecutionPassword(provider);
-  if (!executionPassword) return;
-  const button = $("#run");
-  button.disabled = true;
-  try {
-    const codeKey = await upload(code, "코드"),
-      dataKey = await upload(data, "데이터");
-    $("#uploadState").textContent = "파일 업로드 완료. GPU 작업 등록 중…";
-    const created = await api("/api/jobs", {
-      method: "POST",
-      body: JSON.stringify({
-        type: "custom-gpu",
-        provider: selectedMode(),
-        bucket,
-        code_key: codeKey,
-        data_key: dataKey,
-        command,
-        output_path: $("#outputPath").value.trim() || "outputs",
-        task_mode: $("#taskMode").value,
-      }),
-    });
-    const option = $("#flavor").selectedOptions[0];
-    if (provider === "naver") {
-      const launch = naver.launch_configs[0];
-      await api("/api/ncp-gpu", {
-        method: "POST",
-        body: JSON.stringify({
-          job_id: created.job.id,
-          spec_code: option.value,
-          vpc_no: launch.vpc_no,
-          subnet_no: launch.subnet_no,
-          login_key_name: naver.keys[0].loginKeyName,
-          acg_no: launch.acg_no,
-          max_minutes: Number($("#minutes").value),
-          volume_gb: Number($("#volume").value),
-          execution_password: executionPassword,
-        }),
-      });
-    } else {
-      const image = kakao.images.find((x) => /nvidia/i.test(x.name || ""));
-      await api("/api/cloud?action=create", {
-        method: "POST",
-        body: JSON.stringify({
-          job_id: created.job.id,
-          purpose: "custom-training",
-          flavor_id: option.value,
-          image_id: image.id,
-          subnet_id: kakao.subnets[0].id,
-          key_name: kakao.keypairs[0].name,
-          security_group: kakao.security_groups[0].name,
-          max_minutes: Number($("#minutes").value),
-          volume_gb: Number($("#volume").value),
-          execution_password: executionPassword,
-        }),
-      });
-    }
-    $("#message").textContent =
-      `${provider === "naver" ? "네이버" : "카카오"} GPU가 작업을 시작해요. 끝나면 서버를 자동 반납해요.`;
-    $("#uploadState").textContent = "실행 요청 완료";
-    await loadJobs();
-    $("#jobs").scrollIntoView({ behavior: "smooth" });
-  } catch (e) {
-    $("#message").textContent = errorText(e);
-  } finally {
-    button.disabled = false;
-  }
-}
-function requestExecutionPassword(provider) {
+
+function requestExecutionPassword() {
   const dialog = $("#executionDialog");
-  $("#executionSummary").textContent = `${provider === "naver" ? "네이버클라우드" : "카카오클라우드"} GPU를 최대 ${$("#minutes").value}분 실행합니다. 예상 최대 비용은 ${$("#costTotal").textContent}이며 실제 크레딧이 차감됩니다.`;
+  const provider = environment.provider === "naver" ? "네이버클라우드" : "카카오클라우드";
+  $("#executionSummary").textContent = `${provider} GPU에서 최대 30분 동안 AI를 학습해요. 예상 최대 비용은 ${won(environment.estimate.total)}이며 실제 크레딧이 차감됩니다.`;
   $("#executionPassword").value = "";
   $("#executionError").textContent = "";
   dialog.showModal();
@@ -280,60 +82,83 @@ function requestExecutionPassword(provider) {
     dialog.addEventListener("cancel", cancel);
   });
 }
-async function loadJobs() {
-  const d = await api("/api/jobs"),
-    items = d.items.filter((x) => x.type === "custom-gpu");
-  $("#jobs").innerHTML = items.length
-    ? items
-        .map(
-          (job) =>
-            `<article class="job"><div class="job-head"><div><h3>${job.task_mode === "inference" ? "추론" : "학습"} · ${safe(job.code_key?.split("/").pop() || "GPU 작업")}</h3><p>${safe(job.command)}</p></div><span class="status ${safe(job.status)}">${{ queued: "대기", provisioning: "GPU 생성 중", running: `실행 중 · ${{ bootstrap: "준비", code_download: "코드 받기", code_extract: "압축 풀기", data_download: "데이터 받기", command: job.task_mode === "inference" ? "추론 실행" : "학습 실행" }[job.stage] || "시작"}`, completed: "완료", failed: "실패", cancelled: "취소" }[job.status] || safe(job.status)}</span></div><small>${job.provider === "naver" ? "네이버" : job.provider === "kakao" ? "카카오" : "공급자 선택 중"} · ${new Date(job.created_at).toLocaleString("ko-KR")} · ${safe(job.flavor_name || "GPU 배정 대기")}${job.usage_amount != null ? ` · 실제 비용 ${won(job.usage_amount)}` : ""}</small>${job.error ? `<p>오류: ${safe(job.error)}</p>` : ""}<div class="job-actions">${job.artifacts_ready ? `<a href="/api/jobs?action=result&id=${encodeURIComponent(job.id)}">결과 받기</a><a href="/api/jobs?action=log&id=${encodeURIComponent(job.id)}">로그 받기</a>` : ""}${["queued", "provisioning", "running"].includes(job.status) ? `<button data-cancel="${safe(job.id)}">실행 취소</button>` : ""}</div></article>`,
-        )
-        .join("")
-    : `<p class="empty">아직 실행한 작업이 없어요.</p>`;
-}
-$("#codeFile").addEventListener(
-  "change",
-  (e) =>
-    ($("#codeName").textContent =
-      e.target.files[0]?.name || "ZIP 또는 tar.gz 선택"),
-);
-$("#dataFile").addEventListener(
-  "change",
-  (e) =>
-    ($("#dataName").textContent =
-      e.target.files[0]?.name || "선택 사항 · 대용량 가능"),
-);
-document
-  .querySelectorAll('input[name="provider"]')
-  .forEach((x) => x.addEventListener("change", updateProviderCards));
-["#flavor", "#minutes", "#volume"].forEach((s) =>
-  $(s).addEventListener("change", calculate),
-);
-$("#run").addEventListener("click", run);
-$("#setupNaver").addEventListener("click", setupNaver);
-$("#refresh").addEventListener("click", loadJobs);
-$("#taskMode").addEventListener("change", () => {
-  const inference = $("#taskMode").value === "inference";
-  $("#taskModeHelp").textContent = inference ? "ZIP에 학습된 모델과 추론 코드를 넣고, 입력 데이터는 데이터 파일로 올리세요." : "학습 로그와 모델 파일을 결과 폴더에 저장하면 완료 후 함께 내려받을 수 있어요.";
-  $("#command").placeholder = inference ? '예: pip install -r requirements.txt && python infer.py --model model.pt --input "$CGR_DATA_FILE" --output "$CGR_OUTPUT_DIR"' : '예: pip install -r requirements.txt && python train.py --data "$CGR_DATA_FILE" --output "$CGR_OUTPUT_DIR"';
-});
-$("#jobs").addEventListener("click", async (e) => {
-  const id = e.target.dataset.cancel;
-  if (!id) return;
-  e.target.disabled = true;
+
+async function runExperiment() {
+  if (!environment) return;
+  const password = await requestExecutionPassword();
+  if (!password) return;
+  $("#run").disabled = true;
   try {
-    await api("/api/jobs?action=cancel", {
-      method: "POST",
-      body: JSON.stringify({ id }),
-    });
+    const codeKey = await uploadPreset();
+    const created = await api("/api/jobs", { method: "POST", body: JSON.stringify({ type: "custom-gpu", task_mode: "training", provider: environment.provider, bucket, code_key: codeKey, command: "pip install -r requirements.txt && python train_and_infer.py", output_path: "outputs" }) });
+    currentJob = created.job;
+    if (environment.provider === "naver") {
+      const loginKeyName = environment.key.loginKeyName || environment.key.keyName;
+      await api("/api/ncp-gpu", { method: "POST", body: JSON.stringify({ job_id: currentJob.id, spec_code: environment.spec.serverSpecCode, vpc_no: environment.launch.vpc_no, subnet_no: environment.launch.subnet_no, login_key_name: loginKeyName, acg_no: environment.launch.acg_no, max_minutes: 30, volume_gb: 50, execution_password: password }) });
+    } else {
+      await api("/api/cloud?action=create", { method: "POST", body: JSON.stringify({ job_id: currentJob.id, purpose: "mnist-playground", flavor_id: environment.flavor.id, image_id: environment.image.id, subnet_id: environment.subnet.id, key_name: environment.keypair.name, security_group: environment.securityGroup.name, max_minutes: 30, volume_gb: 80, execution_password: password }) });
+    }
+    $("#message").textContent = "";
+    showProgress({ ...currentJob, status: "provisioning" });
     await loadJobs();
-  } catch (err) {
-    alert(errorText(err));
+    startPolling();
+  } catch (error) {
+    $("#message").textContent = errorText(error);
+    $("#run").disabled = false;
   }
-});
-Promise.all([loadEnvironment(), loadJobs()]).catch((e) => {
-  $("#readyBadge").textContent = "연결 오류";
-  $("#message").textContent = errorText(e);
-});
-setInterval(() => loadJobs().catch(() => {}), 15000);
+}
+
+function showProgress(job) {
+  $("#progressSection").hidden = false;
+  $("#progressSection").scrollIntoView({ behavior: "smooth", block: "center" });
+  const order = { queued: 0, provisioning: 0, running: 1, completed: 2 };
+  const position = order[job.status] ?? 0;
+  document.querySelectorAll(".timeline>div").forEach((item, index) => { item.classList.toggle("done", index < position); item.classList.toggle("active", index === position); });
+  $("#progressTitle").textContent = job.status === "running" ? "AI가 손글씨를 배우고 있어요" : job.status === "completed" ? "학습과 추론이 끝났어요" : job.status === "failed" ? "학습을 완료하지 못했어요" : "클라우드 GPU를 준비하고 있어요";
+  $("#cancel").hidden = !["queued", "provisioning", "running"].includes(job.status);
+}
+
+function parseLog(text) {
+  const result = { metrics: [], predictions: [], summary: null };
+  for (const line of text.split(/\r?\n/)) {
+    for (const [prefix, key] of [["CGR_METRIC ", "metrics"], ["CGR_PREDICTION ", "predictions"]]) if (line.includes(prefix)) { try { result[key].push(JSON.parse(line.slice(line.indexOf(prefix) + prefix.length))); } catch {} }
+    if (line.includes("CGR_SUMMARY ")) { try { const prefix = "CGR_SUMMARY "; result.summary = JSON.parse(line.slice(line.indexOf(prefix) + prefix.length)); } catch {} }
+  }
+  return result;
+}
+
+async function showResult(job) {
+  const log = await api(`/api/jobs?action=log-text&id=${encodeURIComponent(job.id)}`);
+  const result = parseLog(log.text);
+  if (!result.summary) throw new Error("결과를 정리하고 있어요. 잠시 후 다시 확인해주세요.");
+  $("#resultSection").hidden = false;
+  $("#accuracy").textContent = `${result.summary.final_accuracy}%`;
+  $("#trainingTime").textContent = `${result.summary.seconds}초`;
+  $("#actualCost").textContent = job.usage_amount == null ? "정산 중" : won(job.usage_amount);
+  $("#predictions").innerHTML = result.predictions.map((item) => `<article class="prediction"><span class="digit">${item.answer}</span><small>AI의 답 ${item.prediction}</small><b>${item.confidence}% 확신</b></article>`).join("");
+  $("#epochs").innerHTML = result.metrics.map((item) => `<div class="epoch"><b>${item.epoch}회차</b><div class="bar"><i style="width:${Math.min(100, item.accuracy)}%"></i></div><strong>${item.accuracy}%</strong></div>`).join("");
+  $("#resultDownload").href = `/api/jobs?action=result&id=${encodeURIComponent(job.id)}`;
+  $("#logDownload").href = `/api/jobs?action=log&id=${encodeURIComponent(job.id)}`;
+  $("#resultSection").scrollIntoView({ behavior: "smooth" });
+}
+
+async function loadJobs() {
+  const data = await api("/api/jobs");
+  const items = data.items.filter((job) => job.type === "custom-gpu" && /mnist-playground\.zip$/i.test(job.code_key || ""));
+  $("#jobs").innerHTML = items.length ? items.slice(0, 8).map((job) => `<article class="job"><div><h3>손글씨 숫자 분류 AI</h3><p>${new Date(job.created_at).toLocaleString("ko-KR")} · ${{ queued: "대기", provisioning: "GPU 준비 중", running: "학습 중", completed: "완료", failed: "실패", cancelled: "취소" }[job.status] || safe(job.status)}${job.usage_amount != null ? ` · ${won(job.usage_amount)}` : ""}</p></div>${job.status === "completed" ? `<button data-result="${safe(job.id)}">결과 보기</button>` : ""}</article>`).join("") : '<p class="empty">아직 실행한 실험이 없어요.</p>';
+  const active = items.find((job) => ["queued", "provisioning", "running"].includes(job.status));
+  if (active) { currentJob = active; showProgress(active); }
+  if (currentJob) {
+    const fresh = items.find((job) => job.id === currentJob.id);
+    if (fresh) { currentJob = fresh; showProgress(fresh); if (fresh.status === "completed" && $("#resultSection").hidden) await showResult(fresh).catch(() => {}); if (["completed", "failed", "cancelled"].includes(fresh.status)) { clearInterval(pollTimer); pollTimer = null; $("#run").disabled = false; } }
+  }
+}
+
+function startPolling() { if (pollTimer) clearInterval(pollTimer); pollTimer = setInterval(() => loadJobs().catch(() => {}), 10000); }
+
+$("#run").addEventListener("click", runExperiment);
+$("#refresh").addEventListener("click", () => loadJobs().catch((error) => $("#message").textContent = errorText(error)));
+$("#cancel").addEventListener("click", async () => { if (!currentJob || !confirm("실행 중인 GPU를 취소하고 반납할까요?")) return; await api("/api/jobs?action=cancel", { method: "POST", body: JSON.stringify({ id: currentJob.id }) }); await loadJobs(); });
+$("#jobs").addEventListener("click", async (event) => { const id = event.target.dataset.result; if (!id) return; const data = await api("/api/jobs"); const job = data.items.find((item) => item.id === id); if (job) await showResult(job).catch((error) => alert(errorText(error))); });
+
+Promise.all([loadEnvironment(), loadJobs()]).catch((error) => { $("#readyBadge").textContent = "확인 필요"; $("#experimentState").textContent = "준비 오류"; $("#message").textContent = errorText(error); });
