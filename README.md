@@ -1,5 +1,9 @@
 # Cloud GPU Runner
 
+## Capability-first GPU policy
+
+The local baseline is an RTX 5070 Ti with 16GB VRAM. Paid cloud GPU is blocked when the local GPU can reasonably complete the work. Cloud execution permits NVIDIA accelerators with at least 48GB VRAM per GPU: NAVER L40S and KakaoCloud A100 (`p2i`). NAVER L4 and KakaoCloud T4 (`gn1i`) are rejected. Eligible accelerators usually exceed the default 2,000 KRW approval, so paid execution requires a task-specific budget.
+
 NAVER Cloud와 KakaoCloud GPU에서 Python 학습·대량 추론을 실행하는 웰니스박스 공용 실행기입니다. 프로젝트 분석, 비용 예측, 업로드, 실행, 결과 회수, 실제 비용 기록, GPU·공인 IP·임시 디스크 반납을 한 흐름으로 처리합니다.
 
 이 저장소가 유일한 기준입니다.

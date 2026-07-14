@@ -63,7 +63,8 @@ try { $naver = Invoke-CclJson '/api/ncp-gpu' } catch { if ($Provider -eq 'naver'
 $resolved = if ($Provider -eq 'auto') { if ($naver -and $naver.ok) { 'naver' } else { 'kakao' } } else { $Provider }
 if ($resolved -eq 'naver') {
   if (-not $naver.ok) { throw "NAVER GPU is not ready: $($naver.missing -join ', ')" }
-  $spec = $naver.specs | Sort-Object hourly_rate | Select-Object -First 1
+  $spec = $naver.specs | Where-Object { $_.vram_per_gpu_gb -ge 48 } | Sort-Object hourly_rate | Select-Object -First 1
+  if (-not $spec) { throw 'No NAVER GPU materially exceeds the local RTX 5070 Ti 16GB baseline.' }
   $launch = $naver.launch_configs | Select-Object -First 1
   $estimate = Invoke-CclJson '/api/estimate?type=gpu' 'POST' @{ provider = 'naver'; flavor = $spec.serverSpecCode; minutes = $Minutes; volume_gb = 50 }
   $remaining = $credit.remaining.naver
@@ -71,7 +72,8 @@ if ($resolved -eq 'naver') {
 } else {
   $kakao = Invoke-CclJson '/api/cloud?action=readiness'
   if (-not $kakao.ok) { throw 'Kakao GPU is not ready.' }
-  $flavor = $kakao.flavors | Where-Object { $_.manufacturer -eq 'nvidia' -and $kakao.pricing.gpu_hourly.PSObject.Properties[$_.name].Value } | Sort-Object { $kakao.pricing.gpu_hourly.PSObject.Properties[$_.name].Value } | Select-Object -First 1
+  $flavor = $kakao.flavors | Where-Object { $_.manufacturer -eq 'nvidia' -and $_.vram_per_gpu_gb -ge 48 -and $kakao.pricing.gpu_hourly.PSObject.Properties[$_.name].Value } | Sort-Object { $kakao.pricing.gpu_hourly.PSObject.Properties[$_.name].Value } | Select-Object -First 1
+  if (-not $flavor) { throw 'No Kakao GPU materially exceeds the local RTX 5070 Ti 16GB baseline.' }
   $image = $kakao.images | Where-Object { $_.name -match 'nvidia' } | Select-Object -First 1
   $estimate = Invoke-CclJson '/api/estimate?type=gpu' 'POST' @{ provider = 'kakao'; flavor = $flavor.name; minutes = $Minutes; volume_gb = $VolumeGB }
   $remaining = $credit.remaining.kakao

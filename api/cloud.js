@@ -5,6 +5,7 @@ import { presignObject } from "../lib/ncp-storage.js";
 import { addUsage, estimateProviderGpu, KAKAO_GPU_HOURLY } from "../lib/usage.js";
 import { assertNoOtherActiveGpuJob, assertProviderCanSpend } from "../lib/spend-guard.js";
 import { safeInstanceDescription } from "../lib/cloud-metadata.js";
+import { assertHighValueCloudGpu, gpuCapability, isHighValueCloudGpu } from "../lib/gpu-policy.js";
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -117,9 +118,13 @@ export default async function handler(request, response) {
         bcs("keypairs?limit=100"),
         cloud("vpc", "subnets?limit=100"),
       ]);
+      const allFlavors = flavors.flavors || [];
+      const eligibleFlavors = allFlavors.filter((flavor) => String(flavor.manufacturer).toLowerCase() === "nvidia" && isHighValueCloudGpu("kakao", flavor));
       return response.status(200).json({
         ok: true,
-        flavors: flavors.flavors || [],
+        policy: { mode: "capability-first", local_gpu: "RTX 5070 Ti 16GB", minimum_vram_per_gpu_gb: 48 },
+        flavors: eligibleFlavors.map((flavor) => ({ ...flavor, ...gpuCapability("kakao", flavor) })),
+        rejected_flavors: allFlavors.filter((flavor) => String(flavor.manufacturer).toLowerCase() === "nvidia" && !isHighValueCloudGpu("kakao", flavor)).map((flavor) => ({ name: flavor.name, reason: "local_equivalent_or_lower_vram" })),
         images: images.images || [],
         keypairs: keypairs.keypairs || [],
         subnets: subnets.subnets || [],
@@ -160,6 +165,7 @@ export default async function handler(request, response) {
           return response.status(400).json({ error: "nvidia_image_required" });
         if (!selectedFlavor || String(selectedFlavor.manufacturer).toLowerCase() !== "nvidia")
           return response.status(400).json({ error: "nvidia_gpu_required" });
+        assertHighValueCloudGpu("kakao", selectedFlavor);
       }
       const maxMinutes = Math.min(
         1440,

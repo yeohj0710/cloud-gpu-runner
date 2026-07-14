@@ -31,8 +31,8 @@ $naver = Invoke-CclJson '/api/ncp-gpu'
 $kakao = Invoke-CclJson '/api/cloud?action=readiness'
 
 $rows = @(
-  [pscustomobject]@{ Provider='naver'; Ready=$naver.ok; Credit=[math]::Round($usage.credits.naver); Used=[math]::Round($usage.totals.naver); Remaining=[math]::Round($usage.remaining.naver); GPU=$naver.specs.Count },
-  [pscustomobject]@{ Provider='kakao'; Ready=$kakao.ok; Credit=[math]::Round($usage.credits.kakao); Used=[math]::Round($usage.totals.kakao); Remaining=[math]::Round($usage.remaining.kakao); GPU=$kakao.flavors.Count }
+  [pscustomobject]@{ Provider='naver'; CatalogReady=$naver.ok; Credit=[math]::Round($usage.credits.naver); Used=[math]::Round($usage.totals.naver); Remaining=[math]::Round($usage.remaining.naver); EligibleGPU=$naver.specs.Count },
+  [pscustomobject]@{ Provider='kakao'; CatalogReady=$kakao.ok; Credit=[math]::Round($usage.credits.kakao); Used=[math]::Round($usage.totals.kakao); Remaining=[math]::Round($usage.remaining.kakao); EligibleGPU=$kakao.flavors.Count }
 )
 $rows | Format-Table -AutoSize
 
@@ -43,7 +43,7 @@ if ($Provider) {
     $VolumeGB = 50
   } else {
     if (-not $kakao.ok) { throw 'Kakao not ready.' }
-    if (-not $Flavor) { $Flavor = ($kakao.flavors | Where-Object { $_.manufacturer -eq 'nvidia' -and $kakao.pricing.gpu_hourly.PSObject.Properties[$_.name].Value } | Sort-Object { $kakao.pricing.gpu_hourly.PSObject.Properties[$_.name].Value } | Select-Object -First 1).name }
+    if (-not $Flavor) { $Flavor = ($kakao.flavors | Where-Object { $_.manufacturer -eq 'nvidia' -and $_.vram_per_gpu_gb -ge 48 -and $kakao.pricing.gpu_hourly.PSObject.Properties[$_.name].Value } | Sort-Object { $kakao.pricing.gpu_hourly.PSObject.Properties[$_.name].Value } | Select-Object -First 1).name }
   }
   $estimate = Invoke-CclJson '/api/estimate?type=gpu' 'POST' @{ provider=$Provider; flavor=$Flavor; minutes=$Minutes; volume_gb=$VolumeGB }
   [pscustomobject]@{ Provider=$Provider; Flavor=$Flavor; Minutes=$Minutes; VolumeGB=$VolumeGB; GPU=[math]::Round($estimate.gpu,2); Disk=[math]::Round($estimate.disk,2); PublicIP=[math]::Round($estimate.public_ip,2); EstimatedTotal=[math]::Round($estimate.total,2); VAT='excluded' } | Format-List

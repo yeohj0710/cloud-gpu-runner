@@ -4,6 +4,7 @@ import { bootstrapNcpGpu, createNcpGpu, deleteNcpGpu, ncpGpuReadiness, NCP_BLOCK
 import { listJobs, updateJob } from "../lib/jobs.js";
 import { estimateProviderGpu } from "../lib/usage.js";
 import { assertNoOtherActiveGpuJob, assertProviderCanSpend } from "../lib/spend-guard.js";
+import { assertHighValueCloudGpu } from "../lib/gpu-policy.js";
 
 export default async function handler(request, response) {
   if (!await isAuthorized(new Request("https://cloud-gpu-runner/api/ncp-gpu", { headers: { cookie: request.headers.cookie || "" } }))) return response.status(401).json({ error: "unauthorized" });
@@ -17,6 +18,7 @@ export default async function handler(request, response) {
     if (!job) return response.status(404).json({ error: "job_not_found" });
     if (job.status !== "queued") return response.status(409).json({ error: "job_not_queued" });
     const maxMinutes = Math.min(1440, Math.max(15, Number(value.max_minutes) || 60));
+    assertHighValueCloudGpu("naver", String(value.spec_code || ""));
     assertNoOtherActiveGpuJob(jobs, job.id);
     await assertProviderCanSpend("naver", estimateProviderGpu("naver", String(value.spec_code || ""), maxMinutes, 50).total);
     job = await updateJob(job.id, { status: "provisioning", provider: "naver", provisioning_nonce: crypto.randomUUID() });
