@@ -2,6 +2,7 @@ import { listJobs } from "../lib/jobs.js";
 import { CREDIT_EXPIRY, CREDIT_GRANTS, usageSummary } from "../lib/usage.js";
 import { ncp } from "../lib/ncp-cloud.js";
 import { listModels } from "../lib/models.js";
+import { findActivePlaygroundJob } from "../lib/playground-presets.js";
 
 function kind(command = "") {
   if (/smoke\.py/i.test(command)) return "GPU 연결 점검";
@@ -30,13 +31,15 @@ export default async function handler(request, response) {
     const totals = { ...summary.totals, naver: Math.max(actualNaver, summary.totals.naver) };
     const remaining = { naver: summary.credits.naver - totals.naver, kakao: summary.credits.kakao - totals.kakao };
     const allJobs = (await listJobs()).slice().reverse();
-    const latestPlaygroundJob = allJobs.find((job) => job.preset_id === "qwen-lora-v1");
-    const playground_job = latestPlaygroundJob ? {
-      status: latestPlaygroundJob.status, task_mode: latestPlaygroundJob.task_mode, stage: latestPlaygroundJob.stage,
-      provider: latestPlaygroundJob.provider, flavor_name: latestPlaygroundJob.flavor_name,
-      usage_amount: latestPlaygroundJob.usage_amount == null ? null : Number(latestPlaygroundJob.usage_amount),
-      error_code: playgroundErrorCode(latestPlaygroundJob.error), created_at: latestPlaygroundJob.created_at, updated_at: latestPlaygroundJob.updated_at,
+    const publicPlaygroundJob = (job) => job ? {
+      preset_id: job.preset_id, status: job.status, task_mode: job.task_mode, stage: job.stage,
+      provider: job.provider, flavor_name: job.flavor_name,
+      usage_amount: job.usage_amount == null ? null : Number(job.usage_amount),
+      checkpoint_steps: job.model_metadata?.checkpoint_steps || [], latest_checkpoint_step: Number(job.model_metadata?.latest_checkpoint_step || 0),
+      error_code: playgroundErrorCode(job.error), created_at: job.created_at, updated_at: job.updated_at,
     } : null;
+    const playground_jobs = Object.fromEntries(["sdxl-lora-v1", "qwen-lora-v1"].map((presetId) => [presetId, publicPlaygroundJob(findActivePlaygroundJob(allJobs, presetId))]));
+    const playground_job = playground_jobs["qwen-lora-v1"];
     const jobs = allJobs.filter((job) => job.type === "custom-gpu" || job.instance_id || job.usage_amount).slice(0, 20).map((job) => ({
       kind: kind(job.command), provider: job.provider, status: job.status,
       usage_seconds: Number(job.usage_seconds || 0), usage_amount: job.usage_amount == null ? null : Number(job.usage_amount),
@@ -51,12 +54,13 @@ export default async function handler(request, response) {
     try { registeredModels = await listModels(); } catch {}
     const models = registeredModels.slice().reverse().map((model) => ({
       id: model.id, name: model.name, version: model.version, base_model: model.base_model,
-      method: model.method, dataset: model.dataset, provider: model.provider, gpu: model.gpu,
+      preset_id: model.preset_id, kind: model.kind || (model.preset_id === "sdxl-lora-v1" ? "image" : "text"), method: model.method, dataset: model.dataset, provider: model.provider, gpu: model.gpu,
       runtime_seconds: Number(model.runtime_seconds || 0), cost_krw: model.cost_krw == null ? null : Number(model.cost_krw),
-      training: model.training ? { samples: model.training.samples, steps: model.training.steps, train_loss: model.training.train_loss, peak_vram_gb: model.training.peak_vram_gb } : undefined,
+      training_state: model.training_state || "completed", parent_model_id: model.parent_model_id, checkpoints: model.checkpoints || [],
+      training: model.training ? { demo_id: model.training.demo_id || (model.training.dataset === "Hugging Face Diffusers dog example" ? "dog" : undefined), samples: model.training.samples, steps: model.training.steps, steps_added: model.training.steps_added, image_count: model.training.image_count, train_loss: model.training.train_loss, peak_vram_gb: model.training.peak_vram_gb } : undefined,
       created_at: model.created_at,
     }));
     response.setHeader("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
-    return response.json({ ok: true, credits: summary.credits, totals, remaining, categories: summary.categories, expiry: CREDIT_EXPIRY, credit_grants: CREDIT_GRANTS, jobs, events, models, playground_job, updated_at: new Date().toISOString() });
+    return response.json({ ok: true, credits: summary.credits, totals, remaining, categories: summary.categories, expiry: CREDIT_EXPIRY, credit_grants: CREDIT_GRANTS, jobs, events, models, playground_job, playground_jobs, updated_at: new Date().toISOString() });
   } catch (error) { console.error("public-dashboard", error); return response.status(502).json({ error: "dashboard_unavailable" }); }
 }

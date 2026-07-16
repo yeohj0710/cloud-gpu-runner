@@ -6,9 +6,61 @@ import { addUsage, estimateProviderGpu, KAKAO_GPU_HOURLY } from "../lib/usage.js
 import { assertNoOtherActiveGpuJob, assertProviderCanSpend } from "../lib/spend-guard.js";
 import { safeInstanceDescription } from "../lib/cloud-metadata.js";
 import { assertGpuEligibleForJob, gpuCapability, isHighValueCloudGpu } from "../lib/gpu-policy.js";
-import { classifyKakaoInstance } from "../lib/kakao-instance.js";
+import { classifyKakaoInstance, kakaoInstanceFailure } from "../lib/kakao-instance.js";
+import { deleteGpuResources, gpuCost } from "../lib/gpu-resources.js";
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function provisionKakaoNetwork(job, attempts = 1) {
+  if (job.public_ip_id && job.network_interface_id) return { ready: true, job };
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const details = await bcs("instances?limit=100");
+    const candidate = details.instances?.find((item) => item.id === job.instance_id);
+    const state = classifyKakaoInstance(candidate);
+    if (state === "failed") throw new Error(kakaoInstanceFailure(candidate));
+    if (candidate) {
+      let networkInterfaceId = candidate.addresses?.[0]?.network_interface_id;
+      if (!networkInterfaceId) {
+        try {
+          const interfaces = await bcs(`instances/${encodeURIComponent(job.instance_id)}/network-interfaces`);
+          networkInterfaceId = interfaces.network_interfaces?.[0]?.id;
+        } catch (error) {
+          if (!/404|409/.test(String(error.message))) throw error;
+        }
+      }
+      if (networkInterfaceId) {
+        const address = candidate.addresses?.find((item) => item.network_interface_id === networkInterfaceId);
+        let publicIp = null;
+        if (address?.public_ip) {
+          const listed = await cloud("network", "public-ips?limit=100");
+          publicIp = listed.public_ips?.find((item) => item.public_ip === address.public_ip) || null;
+        } else {
+          try {
+            const created = await cloud("bcs", `instances/${encodeURIComponent(job.instance_id)}/network-interfaces/${encodeURIComponent(networkInterfaceId)}/public-ips`, { method: "POST" });
+            publicIp = created.public_ip || created;
+          } catch (error) {
+            if (!/409/.test(String(error.message))) throw error;
+          }
+        }
+        if (publicIp?.id && publicIp?.public_ip) {
+          const updated = await updateJob(job.id, { network_interface_id: networkInterfaceId, public_ip_id: publicIp.id, public_ip_address: publicIp.public_ip, public_ip_attached_at: new Date().toISOString() });
+          return { ready: true, job: updated, publicIp };
+        }
+      }
+    }
+    if (attempt + 1 < attempts) await wait(1500);
+  }
+  return { ready: false, job };
+}
+
+async function failKakaoSetup(job, error) {
+  let cleanupError = null, publicIpRemoved = false;
+  try { ({ publicIpRemoved } = await deleteGpuResources(job)); }
+  catch (cleanup) { cleanupError = String(cleanup.message || cleanup).slice(0, 300); }
+  const { seconds, gpu, disk, publicIp, amount } = gpuCost(job);
+  if (!job.usage_recorded_at) await addUsage({ provider: "kakao", category: "gpu", action: "setup_failed", label: `${job.flavor_name || "GPU"} - ${job.key}`, amount, meta: { job_id: job.id, seconds, gpu, disk, public_ip: publicIp } });
+  return updateJob(job.id, { status: "failed", error: `카카오 GPU 준비 실패: ${String(error.message || error).slice(0, 180)}`, instance_deleted_at: cleanupError ? undefined : new Date().toISOString(), public_ip_removed_at: publicIpRemoved ? new Date().toISOString() : undefined, cleanup_error: cleanupError || undefined, usage_amount: amount, usage_gpu_amount: gpu, usage_disk_amount: disk, usage_public_ip_amount: publicIp, usage_seconds: seconds, usage_recorded_at: job.usage_recorded_at || new Date().toISOString() });
+}
 
 function workerScript(job, baseUrl) {
   const input = presignObject(job.bucket, job.key, "GET", 21600),
@@ -29,6 +81,8 @@ export function customWorkerScript(job, baseUrl = "https://cloud-gpu-runner.verc
   const data = job.data_key ? presignObject(job.bucket, job.data_key, "GET", expiry) : "";
   const model = job.model_key ? presignObject(job.bucket, job.model_key, "GET", expiry) : "";
   const output = presignObject(job.bucket, job.result_key, "PUT", expiry);
+  const preview = presignObject(job.bucket, job.preview_key || `results/previews/${job.id}.jpg`, "PUT", expiry);
+  const manifest = presignObject(job.bucket, job.manifest_key || `results/manifests/${job.id}.json`, "PUT", expiry);
   const log = presignObject(job.bucket, job.log_key, "PUT", expiry);
   const callback = `${baseUrl}/api/worker-callback?id=${encodeURIComponent(job.id)}&token=${jobToken(job.id)}`;
   const command64 = Buffer.from(job.command, "utf8").toString("base64");
@@ -40,10 +94,16 @@ set -Eeuo pipefail
 CALLBACK='${callback}'
 LOG_URL='${log}'
 exec > >(tee /var/log/cgr-worker.log) 2>&1
-finish(){ trap - ERR; status="$1"; error="\${2:-}"; if [ -d "/workspace/${outputPath}" ] && [ -n "$(find "/workspace/${outputPath}" -mindepth 1 -print -quit)" ]; then tar -czf /tmp/result.tar.gz -C /workspace "${outputPath}"; else printf '{"status":"%s","message":"output directory is empty"}\n' "$status" >/tmp/result-status.json; tar -czf /tmp/result.tar.gz -C /tmp result-status.json; fi; curl -fsS -X PUT -H 'content-type: application/gzip' --upload-file /tmp/result.tar.gz '${output}' || true; curl -fsS -X PUT -H 'content-type: text/plain' --upload-file /var/log/cgr-worker.log "$LOG_URL" || true; METADATA="/workspace/${outputPath}/model-metadata.json"; if [ -f "$METADATA" ]; then python3 -c 'import json,sys; print(json.dumps({"status":sys.argv[1],"error":sys.argv[2],"model_metadata":json.load(open(sys.argv[3],encoding="utf-8"))},ensure_ascii=False))' "$status" "$error" "$METADATA" | curl -fsS -X POST -H 'content-type: application/json' --data-binary @- "$CALLBACK" || true; else printf '{"status":"%s","error":"%s"}' "$status" "$error" | curl -fsS -X POST -H 'content-type: application/json' --data-binary @- "$CALLBACK" || true; fi; shutdown -h now || true; }
+stop_snapshots(){ if [ -n "\${SNAPSHOT_PID:-}" ]; then kill "$SNAPSHOT_PID" 2>/dev/null || true; wait "$SNAPSHOT_PID" 2>/dev/null || true; fi; }
+upload_sidecars(){ [ -f "/workspace/${outputPath}/preview-grid.jpg" ] && curl -fsS -X PUT -H 'content-type: image/jpeg' --upload-file "/workspace/${outputPath}/preview-grid.jpg" '${preview}' || true; [ -f "/workspace/${outputPath}/checkpoint-manifest.json" ] && curl -fsS -X PUT -H 'content-type: application/json' --upload-file "/workspace/${outputPath}/checkpoint-manifest.json" '${manifest}' || true; }
+make_snapshot(){ target="$1"; raw="\${target%.gz}"; rm -f "$raw" "$target"; METADATA="/workspace/${outputPath}/model-metadata.json"; if [ -f "$METADATA" ]; then tar -cf "$raw" -C /workspace --exclude='${outputPath}/checkpoint-*' "${outputPath}"; for step in $(python3 -c 'import json,sys; print(" ".join(map(str,json.load(open(sys.argv[1],encoding="utf-8")).get("checkpoint_steps",[]))))' "$METADATA"); do [ -d "/workspace/${outputPath}/checkpoint-$step" ] && tar -rf "$raw" -C /workspace "${outputPath}/checkpoint-$step"; done; gzip -f "$raw"; else tar -czf "$target" -C /workspace "${outputPath}"; fi; }
+post_callback(){ payload="$1"; file="/tmp/cgr-callback-$BASHPID-$RANDOM.json"; printf '%s' "$payload" >"$file"; for attempt in $(seq 1 5); do if curl -fsS --connect-timeout 10 --max-time 20 -X POST -H 'content-type: application/json' --data-binary @"$file" "$CALLBACK"; then rm -f "$file"; return 0; fi; sleep $((attempt * 2)); done; rm -f "$file"; return 1; }
+upload_snapshot(){ if [ -d "/workspace/${outputPath}" ] && [ -n "$(find "/workspace/${outputPath}" -mindepth 1 -print -quit)" ]; then snapshot_uploaded=0; if make_snapshot /tmp/cgr-snapshot.tar.gz && curl -fsS -X PUT -H 'content-type: application/gzip' --upload-file /tmp/cgr-snapshot.tar.gz '${output}'; then snapshot_uploaded=1; fi; if [ "$snapshot_uploaded" = 1 ]; then upload_sidecars; METADATA="/workspace/${outputPath}/model-metadata.json"; if [ -f "$METADATA" ]; then post_callback "$(python3 -c 'import json,sys; print(json.dumps({"status":"running","stage":"checkpoint","model_metadata":json.load(open(sys.argv[1],encoding="utf-8"))},ensure_ascii=False))' "$METADATA")" || true; fi; fi; fi; }
+snapshot_loop(){ while sleep 120; do upload_snapshot; done; }
+finish(){ trap - ERR; stop_snapshots; status="$1"; error="\${2:-}"; if [ -d "/workspace/${outputPath}" ] && [ -n "$(find "/workspace/${outputPath}" -mindepth 1 -print -quit)" ]; then make_snapshot /tmp/result.tar.gz; else printf '{"status":"%s","message":"output directory is empty"}\n' "$status" >/tmp/result-status.json; tar -czf /tmp/result.tar.gz -C /tmp result-status.json; fi; artifact_uploaded=0; if curl -fsS -X PUT -H 'content-type: application/gzip' --upload-file /tmp/result.tar.gz '${output}'; then artifact_uploaded=1; upload_sidecars; else status=failed; error="result artifact upload failed"; fi; curl -fsS -X PUT -H 'content-type: text/plain' --upload-file /var/log/cgr-worker.log "$LOG_URL" || true; METADATA="/workspace/${outputPath}/model-metadata.json"; if [ -f "$METADATA" ] && [ "$artifact_uploaded" = 1 ]; then post_callback "$(python3 -c 'import json,sys; print(json.dumps({"status":sys.argv[1],"error":sys.argv[2],"model_metadata":json.load(open(sys.argv[3],encoding="utf-8"))},ensure_ascii=False))' "$status" "$error" "$METADATA")" || true; else post_callback "$(printf '{"status":"%s","error":"%s"}' "$status" "$error")" || true; fi; shutdown -h now || true; }
 fail(){ code=$?; if [ "$code" = 124 ]; then finish failed "execution timeout"; else finish failed "worker failed (exit $code)"; fi; }
 trap fail ERR
-progress(){ printf '{"status":"running","stage":"%s"}' "$1" | curl -fsS --connect-timeout 15 --max-time 30 -X POST -H 'content-type: application/json' --data-binary @- "$CALLBACK"; }
+progress(){ post_callback "$(printf '{"status":"running","stage":"%s"}' "$1")"; }
 online=0
 for attempt in $(seq 1 150); do
   if progress bootstrap; then online=1; break; fi
@@ -74,6 +134,7 @@ if ! python3 -m pip --version >/dev/null 2>&1; then
 fi
 COMMAND=$(printf '%s' '${command64}' | base64 -d)
 progress command
+snapshot_loop & SNAPSHOT_PID=$!
 timeout ${Math.min(1440, Math.max(15, Number(job.max_minutes) || 60))}m bash -lc "$COMMAND"
 trap - ERR
 finish completed ""
@@ -148,6 +209,18 @@ export default async function handler(request, response) {
         },
       });
     }
+    if (request.method === "POST" && action === "provision") {
+      const job = (await listJobs()).find((item) => item.id === String(request.body?.job_id || ""));
+      if (!job) return response.status(404).json({ error: "job_not_found" });
+      if (job.provider !== "kakao" || job.status !== "provisioning" || !job.instance_id) return response.status(409).json({ error: "job_not_provisioning" });
+      try {
+        const result = await provisionKakaoNetwork(job, 2);
+        return response.status(result.ready ? 200 : 202).json({ ok: true, pending: !result.ready });
+      } catch (error) {
+        await failKakaoSetup(job, error);
+        throw error;
+      }
+    }
     if (request.method === "POST" && action === "create") {
       const v = request.body || {};
       if (!isExecutionPassword(v.execution_password)) return response.status(403).json({ error: "execution_password_invalid" });
@@ -165,18 +238,27 @@ export default async function handler(request, response) {
       if (!job) return response.status(404).json({ error: "job_not_found" });
       if (job.status !== "queued")
         return response.status(409).json({ error: "job_not_queued" });
+      let selectedAvailabilityZone;
       if (job) {
-        const [images, flavorData] = await Promise.all([
+        const [images, flavorData, subnetData] = await Promise.all([
           cloud("image", "images?instance_type=vm&image_type=basic&limit=100"),
           bcs("flavors?instance_type=gpu&limit=100"),
+          cloud("vpc", "subnets?limit=100"),
         ]),
           selected = (images.images || []).find(
             (image) => image.id === v.image_id,
-          ), selectedFlavor = (flavorData.flavors || []).find((flavor) => flavor.id === v.flavor_id);
+          ), selectedFlavor = (flavorData.flavors || []).find((flavor) => flavor.id === v.flavor_id),
+          selectedSubnet = (subnetData.subnets || []).find((subnet) => subnet.id === v.subnet_id);
         if (!selected || !/nvidia/i.test(selected.name || ""))
           return response.status(400).json({ error: "nvidia_image_required" });
         if (!selectedFlavor || String(selectedFlavor.manufacturer).toLowerCase() !== "nvidia")
           return response.status(400).json({ error: "nvidia_gpu_required" });
+        if (!selectedSubnet?.availability_zone)
+          return response.status(400).json({ error: "kakao_subnet_zone_required" });
+        const flavorZones = Array.isArray(selectedFlavor.availability_zone) ? selectedFlavor.availability_zone : [];
+        if (flavorZones.length && !flavorZones.includes(selectedSubnet.availability_zone))
+          return response.status(400).json({ error: "kakao_gpu_zone_unavailable" });
+        selectedAvailabilityZone = selectedSubnet.availability_zone;
         assertGpuEligibleForJob("kakao", selectedFlavor, job);
       }
       const maxMinutes = Math.min(
@@ -210,6 +292,7 @@ export default async function handler(request, response) {
             count: 1,
             image_id: v.image_id,
             flavor_id: v.flavor_id,
+            availability_zone: selectedAvailabilityZone,
             subnets: [{ id: v.subnet_id }],
             volumes: [
               {
@@ -232,7 +315,7 @@ export default async function handler(request, response) {
         const flavor = (
           await bcs("flavors?instance_type=gpu&limit=100")
         ).flavors?.find((x) => x.id === v.flavor_id);
-        await updateJob(job.id, {
+        const provisioningJob = await updateJob(job.id, {
           provider: "kakao",
           status: "provisioning",
           instance_id: instanceId,
@@ -248,41 +331,11 @@ export default async function handler(request, response) {
           billing_started_at: new Date().toISOString(),
         });
         try {
-          let activeInstance;
-          for (let attempt = 0; attempt < 20; attempt += 1) {
-            try {
-              const details = await bcs("instances?limit=100");
-              const candidate = details.instances?.find((item) => item.id === instanceId);
-              const state = classifyKakaoInstance(candidate);
-              if (state === "failed") throw new Error("kakao_gpu_unavailable");
-              if (state === "ready") { activeInstance = candidate; break; }
-            } catch (error) {
-              if (!/404|409/.test(String(error.message))) throw error;
-            }
-            await wait(1500);
-          }
-          if (!activeInstance) throw new Error("kakao_gpu_activation_timeout");
-          let networkInterfaceId = activeInstance.addresses?.[0]?.network_interface_id;
-          if (!networkInterfaceId) {
-            const interfaces = await bcs(`instances/${encodeURIComponent(instanceId)}/network-interfaces`);
-            networkInterfaceId = interfaces.network_interfaces?.[0]?.id;
-          }
-          if (!networkInterfaceId) throw new Error("network_interface_not_ready");
-          let publicIpData;
-          for (let attempt = 0; attempt < 8; attempt += 1) {
-            try { publicIpData = await cloud("bcs", `instances/${encodeURIComponent(instanceId)}/network-interfaces/${encodeURIComponent(networkInterfaceId)}/public-ips`, { method: "POST" }); break; }
-            catch (error) { if (!/409/.test(String(error.message)) || attempt === 7) throw error; await wait(1000); }
-          }
-          const publicIp = publicIpData.public_ip || publicIpData;
-          await updateJob(job.id, { network_interface_id: networkInterfaceId, public_ip_id: publicIp.id, public_ip_address: publicIp.public_ip, public_ip_attached_at: new Date().toISOString() });
-          data.ephemeral_public_ip = { id: publicIp.id, public_ip: publicIp.public_ip };
+          const result = await provisionKakaoNetwork(provisioningJob, 12);
+          if (!result.ready) return response.status(202).json({ ok: true, pending: true, instance: { id: instanceId } });
+          data.ephemeral_public_ip = { id: result.publicIp?.id, public_ip: result.publicIp?.public_ip };
         } catch (error) {
-          try { await cloud("bcs", `instances/${encodeURIComponent(instanceId)}`, { method: "DELETE" }); } catch {}
-          const failedAt = Date.now(), startedAt = new Date((await listJobs()).find((item) => item.id === job.id)?.billing_started_at || failedAt).getTime();
-          const seconds = Math.max(1, (failedAt - startedAt) / 1000), hours = seconds / 3600;
-          const gpu = (KAKAO_GPU_HOURLY[flavor?.name] || 0) * hours, disk = Math.max(50, Number(v.volume_gb) || 50) * 0.16 * hours, amount = gpu + disk;
-          await addUsage({ provider: "kakao", category: "gpu", action: "setup_failed", label: `${flavor?.name || "GPU"} · ${job.key}`, amount, meta: { job_id: job.id, seconds, gpu, disk } });
-          await updateJob(job.id, { status: "failed", error: `인터넷 연결 준비 실패: ${String(error.message).slice(0, 180)}`, instance_deleted_at: new Date().toISOString(), usage_amount: amount, usage_gpu_amount: gpu, usage_disk_amount: disk, usage_public_ip_amount: 0, usage_seconds: seconds, usage_recorded_at: new Date().toISOString() });
+          await failKakaoSetup(provisioningJob, error);
           throw error;
         }
       }

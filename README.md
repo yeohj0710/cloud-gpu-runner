@@ -1,5 +1,11 @@
 # Cloud GPU Runner
 
+## Visual LoRA Playground
+
+The public playground keeps the Qwen text LoRA pipeline and adds a zero-preparation SDXL image LoRA demo. A pinned five-image Diffusers example starts with one button; custom image upload remains available as an optional advanced path. Image runs support 100-step checkpoints, two-minute Object Storage snapshots, interrupted-run recovery, parent-model lineage, same-seed base/LoRA comparison images, and continued training from the selected model's latest checkpoint.
+
+Vercel remains a stateless control plane. Training and checkpoint uploads run on the disposable GPU server; browser uploads go directly to Object Storage, and polling stops when the page is not visible. See `docs/visual-lora-playground.md` for the execution and recovery contract.
+
 ## Capability-first GPU policy
 
 The local baseline is an RTX 5070 Ti with 16GB VRAM. Paid cloud GPU is blocked when the local GPU can reasonably complete the work. Cloud execution permits NVIDIA accelerators with at least 48GB VRAM per GPU: NAVER L40S and KakaoCloud A100 (`p2i`). NAVER L4 and KakaoCloud T4 (`gn1i`) are rejected. Eligible accelerators usually exceed the default 2,000 KRW approval, so paid execution requires a task-specific budget.
